@@ -13,7 +13,13 @@ import { Route as StaffRouteImport } from './routes/staff'
 import { Route as MemberRouteImport } from './routes/member'
 import { Route as ManagementRouteImport } from './routes/management'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StaffIndexRouteImport } from './routes/staff/index'
 import { Route as MemberIndexRouteImport } from './routes/member/index'
+import { Route as StaffGuestsRouteImport } from './routes/staff/guests'
+import { Route as StaffFacilitiesRouteImport } from './routes/staff/facilities'
+import { Route as StaffEventsRouteImport } from './routes/staff/events'
+import { Route as StaffDiningRouteImport } from './routes/staff/dining'
+import { Route as StaffBookingsRouteImport } from './routes/staff/bookings'
 import { Route as MemberProfileRouteImport } from './routes/member/profile'
 import { Route as MemberNoticesRouteImport } from './routes/member/notices'
 import { Route as MemberGuestsRouteImport } from './routes/member/guests'
@@ -43,10 +49,40 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StaffIndexRoute = StaffIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => StaffRoute,
+} as any)
 const MemberIndexRoute = MemberIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => MemberRoute,
+} as any)
+const StaffGuestsRoute = StaffGuestsRouteImport.update({
+  id: '/guests',
+  path: '/guests',
+  getParentRoute: () => StaffRoute,
+} as any)
+const StaffFacilitiesRoute = StaffFacilitiesRouteImport.update({
+  id: '/facilities',
+  path: '/facilities',
+  getParentRoute: () => StaffRoute,
+} as any)
+const StaffEventsRoute = StaffEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => StaffRoute,
+} as any)
+const StaffDiningRoute = StaffDiningRouteImport.update({
+  id: '/dining',
+  path: '/dining',
+  getParentRoute: () => StaffRoute,
+} as any)
+const StaffBookingsRoute = StaffBookingsRouteImport.update({
+  id: '/bookings',
+  path: '/bookings',
+  getParentRoute: () => StaffRoute,
 } as any)
 const MemberProfileRoute = MemberProfileRouteImport.update({
   id: '/profile',
@@ -93,12 +129,18 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/management': typeof ManagementRoute
   '/member': typeof MemberRouteWithChildren
-  '/staff': typeof StaffRoute
+  '/staff': typeof StaffRouteWithChildren
   '/member/events': typeof MemberEventsRoute
   '/member/guests': typeof MemberGuestsRoute
   '/member/notices': typeof MemberNoticesRoute
   '/member/profile': typeof MemberProfileRoute
+  '/staff/bookings': typeof StaffBookingsRoute
+  '/staff/dining': typeof StaffDiningRoute
+  '/staff/events': typeof StaffEventsRoute
+  '/staff/facilities': typeof StaffFacilitiesRoute
+  '/staff/guests': typeof StaffGuestsRoute
   '/member/': typeof MemberIndexRoute
+  '/staff/': typeof StaffIndexRoute
   '/member/dining/$id': typeof MemberDiningIdRoute
   '/member/facilities/$id': typeof MemberFacilitiesIdRoute
   '/member/dining/': typeof MemberDiningIndexRoute
@@ -107,12 +149,17 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/management': typeof ManagementRoute
-  '/staff': typeof StaffRoute
   '/member/events': typeof MemberEventsRoute
   '/member/guests': typeof MemberGuestsRoute
   '/member/notices': typeof MemberNoticesRoute
   '/member/profile': typeof MemberProfileRoute
+  '/staff/bookings': typeof StaffBookingsRoute
+  '/staff/dining': typeof StaffDiningRoute
+  '/staff/events': typeof StaffEventsRoute
+  '/staff/facilities': typeof StaffFacilitiesRoute
+  '/staff/guests': typeof StaffGuestsRoute
   '/member': typeof MemberIndexRoute
+  '/staff': typeof StaffIndexRoute
   '/member/dining/$id': typeof MemberDiningIdRoute
   '/member/facilities/$id': typeof MemberFacilitiesIdRoute
   '/member/dining': typeof MemberDiningIndexRoute
@@ -123,12 +170,18 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/management': typeof ManagementRoute
   '/member': typeof MemberRouteWithChildren
-  '/staff': typeof StaffRoute
+  '/staff': typeof StaffRouteWithChildren
   '/member/events': typeof MemberEventsRoute
   '/member/guests': typeof MemberGuestsRoute
   '/member/notices': typeof MemberNoticesRoute
   '/member/profile': typeof MemberProfileRoute
+  '/staff/bookings': typeof StaffBookingsRoute
+  '/staff/dining': typeof StaffDiningRoute
+  '/staff/events': typeof StaffEventsRoute
+  '/staff/facilities': typeof StaffFacilitiesRoute
+  '/staff/guests': typeof StaffGuestsRoute
   '/member/': typeof MemberIndexRoute
+  '/staff/': typeof StaffIndexRoute
   '/member/dining/$id': typeof MemberDiningIdRoute
   '/member/facilities/$id': typeof MemberFacilitiesIdRoute
   '/member/dining/': typeof MemberDiningIndexRoute
@@ -145,7 +198,13 @@ export interface FileRouteTypes {
     | '/member/guests'
     | '/member/notices'
     | '/member/profile'
+    | '/staff/bookings'
+    | '/staff/dining'
+    | '/staff/events'
+    | '/staff/facilities'
+    | '/staff/guests'
     | '/member/'
+    | '/staff/'
     | '/member/dining/$id'
     | '/member/facilities/$id'
     | '/member/dining/'
@@ -154,12 +213,17 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/management'
-    | '/staff'
     | '/member/events'
     | '/member/guests'
     | '/member/notices'
     | '/member/profile'
+    | '/staff/bookings'
+    | '/staff/dining'
+    | '/staff/events'
+    | '/staff/facilities'
+    | '/staff/guests'
     | '/member'
+    | '/staff'
     | '/member/dining/$id'
     | '/member/facilities/$id'
     | '/member/dining'
@@ -174,7 +238,13 @@ export interface FileRouteTypes {
     | '/member/guests'
     | '/member/notices'
     | '/member/profile'
+    | '/staff/bookings'
+    | '/staff/dining'
+    | '/staff/events'
+    | '/staff/facilities'
+    | '/staff/guests'
     | '/member/'
+    | '/staff/'
     | '/member/dining/$id'
     | '/member/facilities/$id'
     | '/member/dining/'
@@ -185,7 +255,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ManagementRoute: typeof ManagementRoute
   MemberRoute: typeof MemberRouteWithChildren
-  StaffRoute: typeof StaffRoute
+  StaffRoute: typeof StaffRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -218,12 +288,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/staff/': {
+      id: '/staff/'
+      path: '/'
+      fullPath: '/staff/'
+      preLoaderRoute: typeof StaffIndexRouteImport
+      parentRoute: typeof StaffRoute
+    }
     '/member/': {
       id: '/member/'
       path: '/'
       fullPath: '/member/'
       preLoaderRoute: typeof MemberIndexRouteImport
       parentRoute: typeof MemberRoute
+    }
+    '/staff/guests': {
+      id: '/staff/guests'
+      path: '/guests'
+      fullPath: '/staff/guests'
+      preLoaderRoute: typeof StaffGuestsRouteImport
+      parentRoute: typeof StaffRoute
+    }
+    '/staff/facilities': {
+      id: '/staff/facilities'
+      path: '/facilities'
+      fullPath: '/staff/facilities'
+      preLoaderRoute: typeof StaffFacilitiesRouteImport
+      parentRoute: typeof StaffRoute
+    }
+    '/staff/events': {
+      id: '/staff/events'
+      path: '/events'
+      fullPath: '/staff/events'
+      preLoaderRoute: typeof StaffEventsRouteImport
+      parentRoute: typeof StaffRoute
+    }
+    '/staff/dining': {
+      id: '/staff/dining'
+      path: '/dining'
+      fullPath: '/staff/dining'
+      preLoaderRoute: typeof StaffDiningRouteImport
+      parentRoute: typeof StaffRoute
+    }
+    '/staff/bookings': {
+      id: '/staff/bookings'
+      path: '/bookings'
+      fullPath: '/staff/bookings'
+      preLoaderRoute: typeof StaffBookingsRouteImport
+      parentRoute: typeof StaffRoute
     }
     '/member/profile': {
       id: '/member/profile'
@@ -311,11 +423,31 @@ const MemberRouteChildren: MemberRouteChildren = {
 const MemberRouteWithChildren =
   MemberRoute._addFileChildren(MemberRouteChildren)
 
+interface StaffRouteChildren {
+  StaffBookingsRoute: typeof StaffBookingsRoute
+  StaffDiningRoute: typeof StaffDiningRoute
+  StaffEventsRoute: typeof StaffEventsRoute
+  StaffFacilitiesRoute: typeof StaffFacilitiesRoute
+  StaffGuestsRoute: typeof StaffGuestsRoute
+  StaffIndexRoute: typeof StaffIndexRoute
+}
+
+const StaffRouteChildren: StaffRouteChildren = {
+  StaffBookingsRoute: StaffBookingsRoute,
+  StaffDiningRoute: StaffDiningRoute,
+  StaffEventsRoute: StaffEventsRoute,
+  StaffFacilitiesRoute: StaffFacilitiesRoute,
+  StaffGuestsRoute: StaffGuestsRoute,
+  StaffIndexRoute: StaffIndexRoute,
+}
+
+const StaffRouteWithChildren = StaffRoute._addFileChildren(StaffRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ManagementRoute: ManagementRoute,
   MemberRoute: MemberRouteWithChildren,
-  StaffRoute: StaffRoute,
+  StaffRoute: StaffRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
