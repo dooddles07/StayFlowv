@@ -25,4 +25,9 @@ export const env = {
   corsOrigins,
   // Base URL of the frontend, used to build password-reset links.
   appUrl: process.env.APP_URL || corsOrigins[0] || 'http://localhost:3000',
+  // Email delivery (Resend). Without a key, mail is logged to the console only.
+  resendApiKey: process.env.RESEND_API_KEY || '',
+  // Must be a Resend-verified domain in production. The shared sandbox sender
+  // (onboarding@resend.dev) only delivers to your own Resend account email.
+  mailFrom: process.env.MAIL_FROM || 'StayFlow <onboarding@resend.dev>',
 }

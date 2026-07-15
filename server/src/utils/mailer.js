@@ -1,38 +1,53 @@
+import { Resend } from 'resend'
 import { env } from '../config/env.js'
 
-/**
- * Delivers a password-reset link to the user.
- *
- * NOTE: no email provider is wired yet. To make this work in production, replace the
- * body below with a real send (Resend / SES / SMTP via nodemailer) and NEVER log the
- * raw token in production. The raw token is a bearer credential — treat it like a password.
- */
-export async function deliverResetToken(user, rawToken) {
-  const link = `${env.appUrl}/reset-password?token=${rawToken}`
+// Instantiated only when a key is present. No key => dev mode: links are logged, not sent.
+const resend = env.resendApiKey ? new Resend(env.resendApiKey) : null
 
-  if (env.isProd) {
-    // TODO: send `link` to `user.email` via a real email provider.
-    console.warn(`[password-reset] No email provider configured — reset link for ${user.email} was NOT delivered.`)
+/**
+ * Sends one transactional email via Resend. When no key is configured, the message is
+ * logged to the server console instead so local flows stay testable without a provider.
+ * The raw token lives inside `html`/`text`; never log those in production.
+ */
+async function sendMail({ to, subject, html, text, devLog }) {
+  if (!resend) {
+    console.log(`[mailer] (no RESEND_API_KEY) would send "${subject}" to ${to} — ${devLog}`)
     return
   }
-
-  // Dev only: print the link so the flow is testable without an email provider.
-  console.log(`[password-reset] Reset link for ${user.email}: ${link}`)
+  const { error } = await resend.emails.send({ from: env.mailFrom, to, subject, html, text })
+  if (error) {
+    // Surface to the caller so the auth flow can decide how to react, but keep the message generic upstream.
+    throw new Error(`Email delivery failed: ${error.message ?? 'unknown error'}`)
+  }
 }
 
-/**
- * Delivers an email-change verification link to the user's NEW address. Sending to the
- * new address (not the current one) is what proves the user controls it. Same provider
- * caveat as above: wire a real sender before production and never log the raw token there.
- */
+const wrap = (heading, body, cta, link) => `
+  <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#1c1c46">
+    <h1 style="font-size:20px;margin:0 0 12px">${heading}</h1>
+    <p style="font-size:14px;line-height:1.6;margin:0 0 24px;color:#475569">${body}</p>
+    <a href="${link}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600">${cta}</a>
+    <p style="font-size:12px;line-height:1.6;margin:24px 0 0;color:#94a3b8">If the button doesn't work, paste this link into your browser:<br>${link}</p>
+    <p style="font-size:12px;line-height:1.6;margin:16px 0 0;color:#94a3b8">This link expires in 1 hour. If you didn't request this, you can ignore this email.</p>
+  </div>`
+
+export async function deliverResetToken(user, rawToken) {
+  const link = `${env.appUrl}/reset-password?token=${rawToken}`
+  await sendMail({
+    to: user.email,
+    subject: 'Reset your StayFlow password',
+    html: wrap('Reset your password', 'We received a request to reset the password on your StayFlow account.', 'Set a new password', link),
+    text: `Reset your StayFlow password: ${link}`,
+    devLog: link,
+  })
+}
+
 export async function deliverEmailChange(user, newEmail, rawToken) {
   const link = `${env.appUrl}/verify-email?token=${rawToken}`
-
-  if (env.isProd) {
-    // TODO: send `link` to `newEmail` via a real email provider.
-    console.warn(`[email-change] No email provider configured — verification link for ${newEmail} was NOT delivered.`)
-    return
-  }
-
-  console.log(`[email-change] Verification link for ${newEmail}: ${link}`)
+  await sendMail({
+    to: newEmail,
+    subject: 'Confirm your new StayFlow email',
+    html: wrap('Confirm your new email', 'Confirm this address to make it the new sign-in email for your StayFlow account.', 'Confirm email change', link),
+    text: `Confirm your new StayFlow email: ${link}`,
+    devLog: link,
+  })
 }

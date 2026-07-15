@@ -140,7 +140,13 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   if (user) {
     const rawToken = crypto.randomBytes(32).toString('hex')
     await UserModel.setResetToken(user.id, hashResetToken(rawToken), new Date(Date.now() + RESET_TOKEN_TTL_MS))
-    await deliverResetToken(user, rawToken)
+    // Swallow delivery failures: a send error must not flip the generic response and leak
+    // whether the account exists. Log server-side and move on.
+    try {
+      await deliverResetToken(user, rawToken)
+    } catch (err) {
+      console.error('[password-reset] delivery failed:', err.message)
+    }
   }
   logAuthEvent(req, AuthEventType.PASSWORD_RESET_REQUEST, { userId: user?.id ?? null, email })
 
@@ -193,7 +199,12 @@ export const requestEmailChange = asyncHandler(async (req, res) => {
 
   const rawToken = crypto.randomBytes(32).toString('hex')
   await UserModel.setEmailChangeToken(user.id, email, hashResetToken(rawToken), new Date(Date.now() + EMAIL_TOKEN_TTL_MS))
-  await deliverEmailChange(user, email, rawToken)
+  try {
+    await deliverEmailChange(user, email, rawToken)
+  } catch (err) {
+    console.error('[email-change] delivery failed:', err.message)
+    throw ApiError.badRequest('Could not send the verification email. Try again shortly.')
+  }
   logAuthEvent(req, AuthEventType.EMAIL_CHANGE_REQUEST, { userId: user.id, email: user.email })
 
   res.json({ message: `Verification link sent to ${email}. Open it to confirm the change.` })
