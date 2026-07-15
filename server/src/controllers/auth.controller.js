@@ -26,8 +26,14 @@ const cookieOptions = {
 
 const setAuthCookie = (res, token) => res.cookie(AUTH_COOKIE, token, cookieOptions)
 
+// Lock an account for LOCK_DURATION after LOCK_THRESHOLD consecutive failed logins.
+// Per-account (survives IP rotation) — defends credential stuffing the per-IP limiter can't.
+const LOCK_THRESHOLD = 5
+const LOCK_DURATION_MS = 15 * 60 * 1000
+
+// Strip password hash and all internal auth bookkeeping from API responses.
 const sanitize = (user) => {
-  const { passwordHash, ...rest } = user
+  const { passwordHash, tokenVersion, failedLoginCount, lockedUntil, resetTokenHash, resetTokenExpiresAt, ...rest } = user
   return rest
 }
 
@@ -54,8 +60,24 @@ export const login = asyncHandler(async (req, res) => {
   const user = await UserModel.findByEmail(email)
   if (!user) throw ApiError.unauthorized('Invalid credentials')
 
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    throw ApiError.tooManyRequests('Account temporarily locked after repeated failed logins. Try again later.')
+  }
+
   const valid = await bcrypt.compare(password, user.passwordHash)
-  if (!valid) throw ApiError.unauthorized('Invalid credentials')
+  if (!valid) {
+    const count = user.failedLoginCount + 1
+    const locked = count >= LOCK_THRESHOLD
+    await UserModel.setLoginState(user.id, {
+      failedLoginCount: locked ? 0 : count,
+      lockedUntil: locked ? new Date(Date.now() + LOCK_DURATION_MS) : null,
+    })
+    throw ApiError.unauthorized('Invalid credentials')
+  }
+
+  if (user.failedLoginCount > 0 || user.lockedUntil) {
+    await UserModel.setLoginState(user.id, { failedLoginCount: 0, lockedUntil: null })
+  }
 
   const token = signToken(user)
   setAuthCookie(res, token)
