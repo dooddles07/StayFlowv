@@ -167,3 +167,32 @@ export const me = asyncHandler(async (req, res) => {
   if (!user) throw ApiError.notFound('User not found')
   res.json(sanitize(user))
 })
+
+export const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body
+  if (!currentPassword || !newPassword) throw ApiError.badRequest('currentPassword and newPassword are required')
+  assertValidPassword(newPassword)
+
+  const user = await UserModel.findById(req.user.sub)
+  if (!user) throw ApiError.notFound('User not found')
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash)
+  if (!valid) {
+    logAuthEvent(req, AuthEventType.PASSWORD_CHANGE, { userId: user.id, email: user.email, success: false })
+    throw ApiError.unauthorized('Current password is incorrect')
+  }
+
+  if (await bcrypt.compare(newPassword, user.passwordHash)) {
+    throw ApiError.badRequest('New password must be different from the current password')
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS)
+  const updated = await UserModel.applyPasswordChange(user.id, passwordHash)
+  logAuthEvent(req, AuthEventType.PASSWORD_CHANGE, { userId: user.id, email: user.email })
+
+  // tokenVersion bumped → all other sessions are now invalid. Re-issue a cookie
+  // for THIS session so the user who just changed their password stays signed in.
+  const token = signToken(updated)
+  setAuthCookie(res, token)
+  res.json({ message: 'Password updated. Other devices have been signed out.' })
+})

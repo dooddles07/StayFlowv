@@ -27,6 +27,7 @@ interface AuthState {
   hasHydrated: boolean
   login: (email: string, password: string) => Promise<AuthUser>
   logout: () => Promise<void>
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -48,6 +49,10 @@ export const useAuthStore = create<AuthState>()(
           // Clear local state regardless of network outcome.
         }
         set({ user: null })
+      },
+      changePassword: async (currentPassword, newPassword) => {
+        // Server rotates the password and re-issues this session's cookie; other sessions are revoked.
+        await api.post('/auth/change-password', { currentPassword, newPassword })
       },
     }),
     {

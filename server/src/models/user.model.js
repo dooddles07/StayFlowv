@@ -21,5 +21,12 @@ export const UserModel = {
         lockedUntil: null,
       },
     }),
+  // Change password for an authenticated user. Bumps tokenVersion to revoke every
+  // OTHER existing session; the caller re-issues a fresh cookie so the current one survives.
+  applyPasswordChange: (id, passwordHash) =>
+    prisma.user.update({
+      where: { id },
+      data: { passwordHash, tokenVersion: { increment: 1 } },
+    }),
   create: (data) => prisma.user.create({ data }),
 }

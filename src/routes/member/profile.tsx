@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
 import { toast } from 'sonner'
-import { Car, Heart, Pencil, Plus, Shield, SlidersHorizontal, Trash2, User as UserIcon, X } from 'lucide-react'
+import { Car, Heart, Pencil, PhoneCall, Plus, Shield, SlidersHorizontal, Trash2, User as UserIcon, X } from 'lucide-react'
 import { PageHeader } from '#/components/stayflow/page-header'
 import { AvatarInitials } from '#/components/stayflow/avatar-initials'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
@@ -45,6 +45,7 @@ import {
   type ResidentVehicle,
 } from '#/lib/api/resident'
 import { useMyProfile } from '#/lib/store/member-profile'
+import { useAuthStore } from '#/lib/store/auth-store'
 
 export const Route = createFileRoute('/member/profile')({
   head: () => ({ meta: [{ title: 'Profile — StayFlow Member' }] }),
@@ -275,6 +276,61 @@ function DeleteButton({ label, onConfirm }: { label: string; onConfirm: () => Pr
   )
 }
 
+// --- Change password ---
+function SecuritySection() {
+  const changePassword = useAuthStore((s) => s.changePassword)
+  const [current, setCurrent] = React.useState('')
+  const [next, setNext] = React.useState('')
+  const [confirm, setConfirm] = React.useState('')
+  const [busy, setBusy] = React.useState(false)
+
+  const nextError = next && next.length < 8 ? 'Must be at least 8 characters' : ''
+  const sameError = next && current && next === current ? 'Choose a password different from your current one' : ''
+  const confirmError = confirm && confirm !== next ? 'Passwords do not match' : ''
+  const canSubmit = !busy && !!current && next.length >= 8 && confirm === next && next !== current
+
+  async function submit() {
+    if (!canSubmit) return
+    setBusy(true)
+    try {
+      await changePassword(current, next)
+      toast.success('Password updated. Other devices have been signed out.')
+      setCurrent('')
+      setNext('')
+      setConfirm('')
+    } catch (err) {
+      toast.error(errText(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="max-w-md space-y-4">
+        <div>
+          <Label htmlFor="pw-current" className="mb-1.5 text-xs text-muted-text">Current password</Label>
+          <Input id="pw-current" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className="border-border bg-canvas" />
+        </div>
+        <div>
+          <Label htmlFor="pw-new" className="mb-1.5 text-xs text-muted-text">New password</Label>
+          <Input id="pw-new" type="password" autoComplete="new-password" value={next} aria-invalid={!!nextError || !!sameError} onChange={(e) => setNext(e.target.value)} className="border-border bg-canvas" />
+          <FieldError msg={nextError || sameError} />
+        </div>
+        <div>
+          <Label htmlFor="pw-confirm" className="mb-1.5 text-xs text-muted-text">Confirm new password</Label>
+          <Input id="pw-confirm" type="password" autoComplete="new-password" value={confirm} aria-invalid={!!confirmError} onChange={(e) => setConfirm(e.target.value)} className="border-border bg-canvas" />
+          <FieldError msg={confirmError} />
+        </div>
+      </div>
+      <p className="text-xs text-muted-text">Changing your password signs you out on all other devices.</p>
+      <Button onClick={submit} disabled={!canSubmit} className="bg-accent-indigo text-white hover:bg-accent-indigo-soft">
+        {busy ? 'Updating…' : 'Update Password'}
+      </Button>
+    </div>
+  )
+}
+
 function ProfilePage() {
   const { profile, status, setProfile } = useMyProfile()
   const [form, setForm] = React.useState<ResidentProfile | null>(null)
@@ -385,10 +441,13 @@ function ProfilePage() {
             <Car className="size-3.5" /> Vehicles
           </TabsTrigger>
           <TabsTrigger value="emergency" className="gap-1.5 data-[state=active]:bg-accent-indigo/20 data-[state=active]:text-accent-gold">
-            <Shield className="size-3.5" /> Emergency
+            <PhoneCall className="size-3.5" /> Emergency
           </TabsTrigger>
           <TabsTrigger value="preferences" className="gap-1.5 data-[state=active]:bg-accent-indigo/20 data-[state=active]:text-accent-gold">
             <SlidersHorizontal className="size-3.5" /> Preferences
+          </TabsTrigger>
+          <TabsTrigger value="security" className="gap-1.5 data-[state=active]:bg-accent-indigo/20 data-[state=active]:text-accent-gold">
+            <Shield className="size-3.5" /> Security
           </TabsTrigger>
         </TabsList>
 
@@ -612,6 +671,10 @@ function ProfilePage() {
           >
             {saving ? 'Saving…' : 'Save Changes'}
           </Button>
+        </TabsContent>
+
+        <TabsContent value="security" className="rounded-2xl border border-border bg-surface p-5">
+          <SecuritySection />
         </TabsContent>
       </Tabs>
     </div>
