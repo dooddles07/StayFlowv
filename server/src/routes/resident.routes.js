@@ -9,6 +9,14 @@ const router = Router()
 router.get('/me', residentSelfController.getMe)
 router.put('/me', residentSelfController.updateMe)
 
+router.post('/me/family', residentSelfController.addFamilyMember)
+router.put('/me/family/:id', residentSelfController.updateFamilyMember)
+router.delete('/me/family/:id', residentSelfController.removeFamilyMember)
+
+router.post('/me/vehicles', residentSelfController.addVehicle)
+router.put('/me/vehicles/:id', residentSelfController.updateVehicle)
+router.delete('/me/vehicles/:id', residentSelfController.removeVehicle)
+
 router.use(
   buildCrudRouter(residentController, {
     readRoles: ['STAFF', 'MANAGEMENT'],

@@ -87,7 +87,38 @@ const TIER_LABELS: Record<ResidentTier, string> = {
 
 export const tierLabel = (tier: ResidentTier) => TIER_LABELS[tier] ?? tier
 
+export interface FamilyMemberInput {
+  name: string
+  relation: string
+  age: number
+}
+
+export interface VehicleInput {
+  make: string
+  model: string
+  plate: string
+  color: string
+}
+
 export const getMyProfile = () => api.get<ResidentApiResponse>('/residents/me').then(toProfile)
 
 export const updateMyProfile = (patch: ResidentProfileUpdate) =>
   api.put<ResidentApiResponse>('/residents/me', patch).then(toProfile)
+
+export const addFamilyMember = (data: FamilyMemberInput) =>
+  api.post<ResidentApiResponse>('/residents/me/family', data).then(toProfile)
+
+export const updateFamilyMember = (id: string, data: FamilyMemberInput) =>
+  api.put<ResidentApiResponse>(`/residents/me/family/${id}`, data).then(toProfile)
+
+export const removeFamilyMember = (id: string) =>
+  api.del<ResidentApiResponse>(`/residents/me/family/${id}`).then(toProfile)
+
+export const addVehicle = (data: VehicleInput) =>
+  api.post<ResidentApiResponse>('/residents/me/vehicles', data).then(toProfile)
+
+export const updateVehicle = (id: string, data: VehicleInput) =>
+  api.put<ResidentApiResponse>(`/residents/me/vehicles/${id}`, data).then(toProfile)
+
+export const removeVehicle = (id: string) =>
+  api.del<ResidentApiResponse>(`/residents/me/vehicles/${id}`).then(toProfile)
