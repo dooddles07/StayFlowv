@@ -73,6 +73,12 @@ function FieldError({ msg }: { msg?: string }) {
   return <p className="mt-1 text-xs text-red-500">{msg}</p>
 }
 
+// Single-row tab that never compresses its label (scrolls on narrow screens) and
+// keeps a ≥44px touch target. Active state layers three cues (not colour alone):
+// gold-tinted surface + gold text + hairline gold ring.
+const tabTrigger =
+  'min-h-11 shrink-0 gap-1.5 px-3 data-[state=active]:bg-accent-gold/10 data-[state=active]:font-semibold data-[state=active]:text-accent-gold data-[state=active]:ring-1 data-[state=active]:ring-inset data-[state=active]:ring-accent-gold/30'
+
 function toUpdate(f: ResidentProfile): ResidentProfileUpdate {
   return {
     name: f.name.trim(),
@@ -430,23 +436,23 @@ function ProfilePage() {
       </div>
 
       <Tabs defaultValue="personal">
-        <TabsList className="mb-6 flex-wrap bg-surface">
-          <TabsTrigger value="personal" className="gap-1.5 data-[state=active]:bg-accent-indigo/20 data-[state=active]:text-accent-gold">
+        <TabsList className="mb-6 flex h-auto w-full justify-start gap-1 overflow-x-auto bg-surface p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsTrigger value="personal" className={tabTrigger}>
             <UserIcon className="size-3.5" /> Personal
           </TabsTrigger>
-          <TabsTrigger value="family" className="gap-1.5 data-[state=active]:bg-accent-indigo/20 data-[state=active]:text-accent-gold">
+          <TabsTrigger value="family" className={tabTrigger}>
             <Heart className="size-3.5" /> Family
           </TabsTrigger>
-          <TabsTrigger value="vehicles" className="gap-1.5 data-[state=active]:bg-accent-indigo/20 data-[state=active]:text-accent-gold">
+          <TabsTrigger value="vehicles" className={tabTrigger}>
             <Car className="size-3.5" /> Vehicles
           </TabsTrigger>
-          <TabsTrigger value="emergency" className="gap-1.5 data-[state=active]:bg-accent-indigo/20 data-[state=active]:text-accent-gold">
+          <TabsTrigger value="emergency" className={tabTrigger}>
             <PhoneCall className="size-3.5" /> Emergency
           </TabsTrigger>
-          <TabsTrigger value="preferences" className="gap-1.5 data-[state=active]:bg-accent-indigo/20 data-[state=active]:text-accent-gold">
+          <TabsTrigger value="preferences" className={tabTrigger}>
             <SlidersHorizontal className="size-3.5" /> Preferences
           </TabsTrigger>
-          <TabsTrigger value="security" className="gap-1.5 data-[state=active]:bg-accent-indigo/20 data-[state=active]:text-accent-gold">
+          <TabsTrigger value="security" className={tabTrigger}>
             <Shield className="size-3.5" /> Security
           </TabsTrigger>
         </TabsList>
