@@ -78,7 +78,29 @@ function ManagementFacilitiesPage() {
         }
       />
 
-      <div className="overflow-x-auto rounded-2xl border border-border">
+      <div className="space-y-3 sm:hidden">
+        {state.facilities.map((f) => (
+          <div key={f.id} className="rounded-2xl border border-border bg-surface p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium text-foreground">{f.name}</p>
+                <p className="text-xs text-muted-text">{f.category} · Capacity {f.capacity}</p>
+              </div>
+              <StatusPill status={f.status} />
+            </div>
+            <div className="mt-3 flex justify-end gap-1.5">
+              <Button size="icon" variant="ghost" className="size-7 text-muted-text hover:text-foreground" onClick={() => setEditing(f)}>
+                <Pencil className="size-3.5" />
+              </Button>
+              <Button size="icon" variant="ghost" className="size-7 text-rose-400 hover:bg-rose-500/10" onClick={() => setDeleteTarget(f)}>
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="bg-surface-hover text-xs uppercase tracking-wide text-muted-text">
             <tr>

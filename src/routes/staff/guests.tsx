@@ -124,7 +124,22 @@ function StaffGuestsPage() {
       ) : history.length === 0 ? (
         <EmptyState icon={UserCheck} title="No guest history yet" />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border">
+        <>
+          <div className="space-y-3 sm:hidden">
+            {history.map((guest) => {
+              const host = state.residents.find((r) => r.id === guest.hostResidentId)
+              return (
+                <div key={guest.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{guest.name}</p>
+                    <p className="text-xs text-muted-text">{guest.arrivalDate} · Hosted by {host?.name}</p>
+                  </div>
+                  <StatusPill status={guest.status} />
+                </div>
+              )
+            })}
+          </div>
+        <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
           <table className="w-full min-w-[600px] text-left text-sm">
             <thead className="bg-surface-hover text-xs uppercase tracking-wide text-muted-text">
               <tr>
@@ -151,6 +166,7 @@ function StaffGuestsPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <Dialog open={scannerOpen} onOpenChange={setScannerOpen}>

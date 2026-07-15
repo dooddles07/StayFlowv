@@ -79,7 +79,31 @@ function StaffDiningPage() {
       ) : reservations.length === 0 ? (
         <EmptyState icon={UtensilsCrossed} title="No reservations yet" />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border">
+        <>
+          <div className="space-y-3 sm:hidden">
+            {reservations.map((r) => {
+              const restaurant = state.restaurants.find((x) => x.id === r.restaurantId)
+              const resident = state.residents.find((x) => x.id === r.residentId)
+              return (
+                <div key={r.id} className="rounded-2xl border border-border bg-surface p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{restaurant?.name}</p>
+                      <p className="text-xs text-muted-text">{resident?.name}</p>
+                    </div>
+                    <StatusPill status={r.status} />
+                  </div>
+                  <p className="mt-2 text-xs text-muted-text">{r.date} · {r.time} · Party of {r.partySize} · {r.seating}</p>
+                  {r.status === 'confirmed' && (
+                    <Button size="sm" variant="outline" className="mt-3 gap-1.5 border-border text-xs text-foreground hover:bg-surface-hover" onClick={() => confirmArrival(r.id)}>
+                      <CheckCircle2 className="size-3.5" /> Confirm arrival
+                    </Button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="bg-surface-hover text-xs uppercase tracking-wide text-muted-text">
               <tr>
@@ -121,6 +145,7 @@ function StaffDiningPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   )

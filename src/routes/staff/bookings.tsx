@@ -76,7 +76,36 @@ function BookingsPage() {
       {bookings.length === 0 ? (
         <EmptyState icon={ClipboardList} title="No bookings match this filter" />
       ) : view === 'table' ? (
-        <div className="overflow-x-auto rounded-2xl border border-border">
+        <>
+          <div className="space-y-3 sm:hidden">
+            {bookings.map((b) => {
+              const facility = state.facilities.find((f) => f.id === b.facilityId)
+              const resident = state.residents.find((r) => r.id === b.residentId)
+              return (
+                <div key={b.id} className="rounded-2xl border border-border bg-surface p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{facility?.name}</p>
+                      <p className="text-xs text-muted-text">{resident?.name}</p>
+                    </div>
+                    <StatusPill status={b.status} />
+                  </div>
+                  <p className="mt-2 text-xs text-muted-text">{b.date} · {b.timeSlot} · Party of {b.partySize}</p>
+                  {b.status === 'pending' && (
+                    <div className="mt-3 flex justify-end gap-1.5">
+                      <Button size="icon" variant="ghost" className="size-7 text-emerald-400 hover:bg-emerald-500/10" onClick={() => updateStatus(b.id, 'confirmed')}>
+                        <Check className="size-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="size-7 text-rose-400 hover:bg-rose-500/10" onClick={() => updateStatus(b.id, 'cancelled')}>
+                        <X className="size-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="bg-surface-hover text-xs uppercase tracking-wide text-muted-text">
               <tr>
@@ -123,6 +152,7 @@ function BookingsPage() {
             </tbody>
           </table>
         </div>
+        </>
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([date, items]) => (

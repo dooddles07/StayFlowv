@@ -116,7 +116,34 @@ function UsersPage() {
       </Tabs>
 
       {tab === 'members' ? (
-        <div className="overflow-x-auto rounded-2xl border border-border">
+        <>
+          <div className="space-y-3 sm:hidden">
+            {state.residents.map((r) => (
+              <div key={r.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <AvatarInitials seed={r.name} className="size-8 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{r.name}</p>
+                    <p className="truncate text-xs text-muted-text">{r.unit} · {r.tier}</p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 gap-1.5">
+                  <Button size="icon" variant="ghost" className="size-7 text-muted-text hover:text-foreground" onClick={() => setEditingResident(r)}>
+                    <Pencil className="size-3.5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-7 text-rose-400 hover:bg-rose-500/10"
+                    onClick={() => setDeleteTarget({ kind: 'resident', id: r.id, name: r.name })}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
           <table className="w-full min-w-[680px] text-left text-sm">
             <thead className="bg-surface-hover text-xs uppercase tracking-wide text-muted-text">
               <tr>
@@ -159,8 +186,36 @@ function UsersPage() {
             </tbody>
           </table>
         </div>
+        </>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border">
+        <>
+          <div className="space-y-3 sm:hidden">
+            {state.staff.map((s) => (
+              <div key={s.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <AvatarInitials seed={s.name} className="size-8 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{s.name}</p>
+                    <p className="truncate text-xs text-muted-text">{s.role} · {s.shift}</p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 gap-1.5">
+                  <Button size="icon" variant="ghost" className="size-7 text-muted-text hover:text-foreground" onClick={() => setEditingStaff(s)}>
+                    <Pencil className="size-3.5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-7 text-rose-400 hover:bg-rose-500/10"
+                    onClick={() => setDeleteTarget({ kind: 'staff', id: s.id, name: s.name })}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
           <table className="w-full min-w-[680px] text-left text-sm">
             <thead className="bg-surface-hover text-xs uppercase tracking-wide text-muted-text">
               <tr>
@@ -203,6 +258,7 @@ function UsersPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <Sheet open={!!editingResident} onOpenChange={(open) => !open && setEditingResident(null)}>
