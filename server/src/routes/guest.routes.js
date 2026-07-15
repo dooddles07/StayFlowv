@@ -1,9 +1,19 @@
+import { Router } from 'express'
 import { guestController } from '../controllers/guest.controller.js'
-import { buildCrudRouter } from '../utils/crudRouter.js'
+import { GuestModel } from '../models/guest.model.js'
+import { requireOwnResidentBody, requireOwnResidentParam, requireOwnerRecord, requireRole } from '../middleware/auth.middleware.js'
 
-const router = buildCrudRouter(guestController)
-router.get('/resident/:residentId', guestController.byResident)
-router.post('/:id/check-in', guestController.checkIn)
-router.post('/:id/check-out', guestController.checkOut)
+const staffOnly = requireRole('STAFF', 'MANAGEMENT')
+const ownRecord = requireOwnerRecord(GuestModel, 'hostResidentId')
+
+const router = Router()
+router.get('/', staffOnly, guestController.list)
+router.get('/resident/:residentId', requireOwnResidentParam(), guestController.byResident)
+router.get('/:id', ownRecord, guestController.getOne)
+router.post('/', requireOwnResidentBody('hostResidentId'), guestController.create)
+router.put('/:id', ownRecord, guestController.update)
+router.delete('/:id', ownRecord, guestController.remove)
+router.post('/:id/check-in', staffOnly, guestController.checkIn)
+router.post('/:id/check-out', staffOnly, guestController.checkOut)
 
 export default router

@@ -1,11 +1,16 @@
 import { Router } from 'express'
+import { requireRole } from '../middleware/auth.middleware.js'
 
-export const buildCrudRouter = (controller) => {
+const noop = (req, res, next) => next()
+
+export const buildCrudRouter = (controller, { readRoles, writeRoles } = {}) => {
   const router = Router()
-  router.get('/', controller.list)
-  router.get('/:id', controller.getOne)
-  router.post('/', controller.create)
-  router.put('/:id', controller.update)
-  router.delete('/:id', controller.remove)
+  const read = readRoles ? requireRole(...readRoles) : noop
+  const write = writeRoles ? requireRole(...writeRoles) : noop
+  router.get('/', read, controller.list)
+  router.get('/:id', read, controller.getOne)
+  router.post('/', write, controller.create)
+  router.put('/:id', write, controller.update)
+  router.delete('/:id', write, controller.remove)
   return router
 }
