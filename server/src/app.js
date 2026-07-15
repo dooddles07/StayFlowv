@@ -7,6 +7,8 @@ import routes from './routes/index.js'
 
 const app = express()
 
+app.set('trust proxy', 1)
+
 app.use(
   cors({
     origin: env.corsOrigins.includes('*') ? true : env.corsOrigins,

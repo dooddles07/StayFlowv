@@ -15,6 +15,21 @@ const sanitize = (user) => {
 const VALID_ROLES = ['MEMBER', 'STAFF', 'MANAGEMENT']
 
 export const register = asyncHandler(async (req, res) => {
+  const { email, password, displayName, residentId } = req.body
+  if (!email || !password || !displayName) {
+    throw ApiError.badRequest('email, password, displayName are required')
+  }
+
+  const existing = await UserModel.findByEmail(email)
+  if (existing) throw ApiError.conflict('Email already registered')
+
+  const passwordHash = await bcrypt.hash(password, 10)
+  const user = await UserModel.create({ email, passwordHash, role: 'MEMBER', displayName, residentId })
+  const token = signToken(user)
+  res.status(201).json({ token, user: sanitize(user) })
+})
+
+export const registerStaff = asyncHandler(async (req, res) => {
   const { email, password, role, displayName, residentId, staffId } = req.body
   if (!email || !password || !role || !displayName) {
     throw ApiError.badRequest('email, password, role, displayName are required')
