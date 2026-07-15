@@ -1,0 +1,16 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sf-logo-grad" x1="6" y1="10" x2="58" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="55%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#c9a84c"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#sf-logo-grad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 34 V22"/>
+    <path d="M26 34 V14"/>
+    <path d="M38 34 V26"/>
+    <path d="M50 34 V19"/>
+    <path d="M9 44 Q 20 34 32 44 T 55 44" stroke-width="3.25"/>
+  </g>
+</svg>

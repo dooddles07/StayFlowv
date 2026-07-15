@@ -56,6 +56,10 @@ function arc(color) {
 
 const VARIANTS = { waves, rings, grid, dots, diagonalBars, arc }
 
+function escapeXml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
 function svgCard({ id, hueA, hueB, variant, label }) {
   const gradId = `g-${id}`
   let pattern = ''
@@ -82,7 +86,7 @@ function svgCard({ id, hueA, hueB, variant, label }) {
   <rect width="800" height="450" fill="url(#glow-${id})"/>
   <g clip-path="url(#clip-${id})">${pattern}</g>
   <clipPath id="clip-${id}"><rect width="800" height="450"/></clipPath>
-  <text x="40" y="405" font-family="Poppins, sans-serif" font-size="15" letter-spacing="2" fill="${hueA}" opacity="0.55">${label.toUpperCase()}</text>
+  <text x="40" y="405" font-family="Poppins, sans-serif" font-size="15" letter-spacing="2" fill="${hueA}" opacity="0.55">${escapeXml(label.toUpperCase())}</text>
 </svg>`
 }
 

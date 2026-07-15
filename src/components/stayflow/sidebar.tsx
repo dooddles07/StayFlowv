@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { ArrowLeftRight, Sparkles } from 'lucide-react'
+import { ArrowLeftRight } from 'lucide-react'
 import { navConfig, portalLabels } from './nav-config'
 import { AvatarInitials } from './avatar-initials'
 import type { Portal } from '#/lib/hooks/use-portal-preference'
@@ -22,8 +22,8 @@ export function Sidebar({ portal, identityName, identitySubtitle, onNavigate, cl
   return (
     <aside className={cn('flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground', className)}>
       <div className="flex items-center gap-2.5 px-6 py-6">
-        <div className="flex size-9 items-center justify-center rounded-xl bg-accent-indigo/20 text-accent-gold">
-          <Sparkles className="size-5" />
+        <div className="flex size-9 items-center justify-center rounded-xl bg-accent-indigo/20">
+          <img src="/logo.svg" alt="" className="size-6" />
         </div>
         <div>
           <p className="text-[15px] font-semibold leading-tight tracking-tight">StayFlow</p>
@@ -70,6 +70,7 @@ export function Sidebar({ portal, identityName, identitySubtitle, onNavigate, cl
           <ArrowLeftRight className="size-3.5" />
           Switch portal
         </button>
+        <p className="text-center text-[10px] uppercase tracking-[0.14em] text-muted-text/50">by QUAN7UM</p>
       </div>
     </aside>
   )

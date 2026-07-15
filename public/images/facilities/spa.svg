@@ -18,5 +18,5 @@
     <path d="M-20 380 Q 100 320 220 380 T 460 380 T 700 380 T 940 380" stroke="#ddc178" stroke-width="1.5" fill="none" opacity="0.2"/>
   </g>
   <clipPath id="clip-facilities-spa"><rect width="800" height="450"/></clipPath>
-  <text x="40" y="405" font-family="Poppins, sans-serif" font-size="15" letter-spacing="2" fill="#ddc178" opacity="0.55">SERENITY SPA & SAUNA</text>
+  <text x="40" y="405" font-family="Poppins, sans-serif" font-size="15" letter-spacing="2" fill="#ddc178" opacity="0.55">SERENITY SPA &amp; SAUNA</text>
 </svg>
