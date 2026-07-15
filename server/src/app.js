@@ -1,5 +1,6 @@
 import cors from 'cors'
 import express from 'express'
+import helmet from 'helmet'
 import morgan from 'morgan'
 import { env } from './config/env.js'
 import { errorMiddleware, notFoundMiddleware } from './middleware/error.middleware.js'
@@ -8,6 +9,10 @@ import routes from './routes/index.js'
 const app = express()
 
 app.set('trust proxy', 1)
+
+// Security headers (HSTS, X-Content-Type-Options, frameguard, etc.). CORP is disabled so the
+// explicit CORS allowlist below governs cross-origin access on its own (this is a JSON API).
+app.use(helmet({ crossOriginResourcePolicy: false }))
 
 // Wildcard + credentials is forbidden by the CORS spec and unsafe; only reflect an
 // explicit allowlist with credentials. Empty allowlist => cross-origin denied (same-origin still works).

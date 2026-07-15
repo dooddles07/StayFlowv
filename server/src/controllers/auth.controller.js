@@ -34,6 +34,7 @@ const setAuthCookie = (res, token) => res.cookie(AUTH_COOKIE, token, cookieOptio
 const LOCK_THRESHOLD = 5
 const LOCK_DURATION_MS = 15 * 60 * 1000
 
+const BCRYPT_ROUNDS = 12
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000
 const MIN_PASSWORD_LENGTH = 8
 // bcrypt silently truncates input past 72 bytes — reject longer so the stored hash matches what the user typed.
@@ -65,7 +66,7 @@ export const register = asyncHandler(async (req, res) => {
   const existing = await UserModel.findByEmail(email)
   if (existing) throw ApiError.conflict('Email already registered')
 
-  const passwordHash = await bcrypt.hash(password, 10)
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
   const user = await UserModel.create({ email, passwordHash, role: 'MEMBER', displayName, residentId })
   logAuthEvent(req, AuthEventType.REGISTER, { userId: user.id, email: user.email })
   const token = signToken(user)
@@ -154,7 +155,7 @@ export const resetPassword = asyncHandler(async (req, res) => {
     throw ApiError.badRequest('Invalid or expired reset token')
   }
 
-  const passwordHash = await bcrypt.hash(password, 10)
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
   await UserModel.applyPasswordReset(user.id, passwordHash)
   logAuthEvent(req, AuthEventType.PASSWORD_RESET_SUCCESS, { userId: user.id, email: user.email })
   // tokenVersion was bumped, so any existing sessions are now revoked — user must sign in again.
