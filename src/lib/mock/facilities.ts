@@ -60,7 +60,7 @@ export const facilities: Facility[] = [
     category: 'Wellness',
     description: 'Open-air rooftop deck for yoga, meditation, and sound bath sessions with skyline backdrop.',
     rules: ['Mats provided, please sanitize after use', 'Quiet hours strictly enforced'],
-    image: '/images/facilities/yoga.svg',
+    image: '/images/facilities/yoga.png',
     capacity: 16,
     openHours: '6:00 AM – 8:00 PM',
     status: 'open',
