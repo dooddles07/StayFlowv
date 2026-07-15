@@ -20,7 +20,7 @@ export function Sidebar({ portal, identityName, identitySubtitle, onNavigate, cl
   const rootPath = items[0]!.to
 
   return (
-    <aside className={cn('flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground', className)}>
+    <aside className={cn('sticky top-0 flex h-dvh w-64 flex-col bg-sidebar text-sidebar-foreground', className)}>
       <div className="flex items-center gap-2.5 px-6 py-6">
         <div className="flex size-9 items-center justify-center rounded-xl bg-accent-indigo/20">
           <img src="/logo.svg" alt="" className="size-6" />
@@ -31,7 +31,7 @@ export function Sidebar({ portal, identityName, identitySubtitle, onNavigate, cl
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3">
         {items.map((item) => {
           const isActive = item.to === rootPath ? location.pathname === item.to : location.pathname.startsWith(item.to)
           const Icon = item.icon
