@@ -19,3 +19,20 @@ export async function deliverResetToken(user, rawToken) {
   // Dev only: print the link so the flow is testable without an email provider.
   console.log(`[password-reset] Reset link for ${user.email}: ${link}`)
 }
+
+/**
+ * Delivers an email-change verification link to the user's NEW address. Sending to the
+ * new address (not the current one) is what proves the user controls it. Same provider
+ * caveat as above: wire a real sender before production and never log the raw token there.
+ */
+export async function deliverEmailChange(user, newEmail, rawToken) {
+  const link = `${env.appUrl}/verify-email?token=${rawToken}`
+
+  if (env.isProd) {
+    // TODO: send `link` to `newEmail` via a real email provider.
+    console.warn(`[email-change] No email provider configured — verification link for ${newEmail} was NOT delivered.`)
+    return
+  }
+
+  console.log(`[email-change] Verification link for ${newEmail}: ${link}`)
+}

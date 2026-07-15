@@ -28,5 +28,29 @@ export const UserModel = {
       where: { id },
       data: { passwordHash, tokenVersion: { increment: 1 } },
     }),
+
+  // --- Email change (verify-then-apply) ---
+  findByPendingEmail: (pendingEmail) => prisma.user.findUnique({ where: { pendingEmail } }),
+  findByEmailTokenHash: (emailTokenHash) => prisma.user.findUnique({ where: { emailTokenHash } }),
+  setEmailChangeToken: (id, pendingEmail, emailTokenHash, emailTokenExpiresAt) =>
+    prisma.user.update({ where: { id }, data: { pendingEmail, emailTokenHash, emailTokenExpiresAt } }),
+  // Apply a verified email change atomically: the login identity (users.email) and the
+  // linked resident record must never diverge. Revokes all sessions (email is identity).
+  applyEmailChange: (user) =>
+    prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          email: user.pendingEmail,
+          pendingEmail: null,
+          emailTokenHash: null,
+          emailTokenExpiresAt: null,
+          tokenVersion: { increment: 1 },
+        },
+      })
+      if (user.residentId) {
+        await tx.resident.update({ where: { id: user.residentId }, data: { email: user.pendingEmail } })
+      }
+    }),
   create: (data) => prisma.user.create({ data }),
 }

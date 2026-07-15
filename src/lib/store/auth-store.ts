@@ -28,6 +28,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<AuthUser>
   logout: () => Promise<void>
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>
+  requestEmailChange: (newEmail: string, currentPassword: string) => Promise<string>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -53,6 +54,11 @@ export const useAuthStore = create<AuthState>()(
       changePassword: async (currentPassword, newPassword) => {
         // Server rotates the password and re-issues this session's cookie; other sessions are revoked.
         await api.post('/auth/change-password', { currentPassword, newPassword })
+      },
+      requestEmailChange: async (newEmail, currentPassword) => {
+        // Server emails a verification link to the new address; nothing changes until it's opened.
+        const { message } = await api.post<{ message: string }>('/auth/change-email', { newEmail, currentPassword })
+        return message
       },
     }),
     {

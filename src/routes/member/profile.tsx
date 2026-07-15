@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useBlocker } from '@tanstack/react-router'
 import * as React from 'react'
 import { toast } from 'sonner'
 import { Car, Heart, Pencil, PhoneCall, Plus, Shield, SlidersHorizontal, Trash2, User as UserIcon, X } from 'lucide-react'
@@ -55,6 +55,7 @@ export const Route = createFileRoute('/member/profile')({
 const errText = (err: unknown) => (err instanceof ApiError ? err.message : 'Something went wrong. Try again.')
 
 const PHONE_RE = /^[+()\-\s\d]{7,}$/
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const isBlank = (s: string) => s.trim() === ''
 const phoneError = (v: string) => (isBlank(v) ? 'Phone is required' : !PHONE_RE.test(v) ? 'Enter a valid phone number' : '')
 
@@ -282,6 +283,58 @@ function DeleteButton({ label, onConfirm }: { label: string; onConfirm: () => Pr
   )
 }
 
+// --- Change email (verify-then-apply) ---
+function EmailSection() {
+  const currentEmail = useMyProfile().profile?.email ?? ''
+  const requestEmailChange = useAuthStore((s) => s.requestEmailChange)
+  const [newEmail, setNewEmail] = React.useState('')
+  const [password, setPassword] = React.useState('')
+  const [busy, setBusy] = React.useState(false)
+
+  const emailError = newEmail && !EMAIL_RE.test(newEmail) ? 'Enter a valid email address' : ''
+  const sameError = newEmail && newEmail.toLowerCase() === currentEmail.toLowerCase() ? 'This is already your email' : ''
+  const canSubmit = !busy && !!password && EMAIL_RE.test(newEmail) && newEmail.toLowerCase() !== currentEmail.toLowerCase()
+
+  async function submit() {
+    if (!canSubmit) return
+    setBusy(true)
+    try {
+      const message = await requestEmailChange(newEmail.trim(), password)
+      toast.success(message)
+      setNewEmail('')
+      setPassword('')
+    } catch (err) {
+      toast.error(errText(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-sm font-medium text-foreground">Email address</p>
+        <p className="text-xs text-muted-text">Current: {currentEmail}</p>
+      </div>
+      <div className="max-w-md space-y-4">
+        <div>
+          <Label htmlFor="email-new" className="mb-1.5 text-xs text-muted-text">New email</Label>
+          <Input id="email-new" type="email" autoComplete="email" value={newEmail} aria-invalid={!!emailError || !!sameError} onChange={(e) => setNewEmail(e.target.value)} className="border-border bg-canvas" />
+          <FieldError msg={emailError || sameError} />
+        </div>
+        <div>
+          <Label htmlFor="email-password" className="mb-1.5 text-xs text-muted-text">Current password</Label>
+          <Input id="email-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="border-border bg-canvas" />
+        </div>
+      </div>
+      <p className="text-xs text-muted-text">We'll send a verification link to the new address. Your email changes only after you open it.</p>
+      <Button onClick={submit} disabled={!canSubmit} className="bg-accent-indigo text-white hover:bg-accent-indigo-soft">
+        {busy ? 'Sending…' : 'Send verification link'}
+      </Button>
+    </div>
+  )
+}
+
 // --- Change password ---
 function SecuritySection() {
   const changePassword = useAuthStore((s) => s.changePassword)
@@ -349,6 +402,30 @@ function ProfilePage() {
     if (profile) setForm(profile)
   }, [profile?.id])
 
+  const dirty =
+    form && profile
+      ? {
+          personal: form.name !== profile.name || form.phone !== profile.phone,
+          emergency:
+            form.emergencyContact.name !== profile.emergencyContact.name ||
+            form.emergencyContact.relation !== profile.emergencyContact.relation ||
+            form.emergencyContact.phone !== profile.emergencyContact.phone,
+          prefs:
+            form.preferences.notifications !== profile.preferences.notifications ||
+            form.preferences.newsletter !== profile.preferences.newsletter ||
+            form.preferences.dietary.join('|') !== profile.preferences.dietary.join('|'),
+        }
+      : { personal: false, emergency: false, prefs: false }
+  const isDirty = dirty.personal || dirty.emergency || dirty.prefs
+
+  // Guard against losing unsaved edits: block in-app navigation (styled prompt via
+  // resolver) and warn the browser on tab close / refresh.
+  const blocker = useBlocker({
+    shouldBlockFn: () => isDirty,
+    enableBeforeUnload: () => isDirty,
+    withResolver: true,
+  })
+
   async function save(message: string) {
     if (!form) return
     if (Object.values(computeErrors(form)).some(Boolean)) {
@@ -396,15 +473,6 @@ function ProfilePage() {
   }
 
   const errors = computeErrors(form)
-  const personalDirty = form.name !== profile.name || form.phone !== profile.phone
-  const emergencyDirty =
-    form.emergencyContact.name !== profile.emergencyContact.name ||
-    form.emergencyContact.relation !== profile.emergencyContact.relation ||
-    form.emergencyContact.phone !== profile.emergencyContact.phone
-  const prefsDirty =
-    form.preferences.notifications !== profile.preferences.notifications ||
-    form.preferences.newsletter !== profile.preferences.newsletter ||
-    form.preferences.dietary.join('|') !== profile.preferences.dietary.join('|')
 
   function addDietary() {
     if (!form) return
@@ -426,6 +494,19 @@ function ProfilePage() {
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader eyebrow="Account" title="Profile" description="Manage your personal information and preferences." />
+
+      <AlertDialog open={blocker.status === 'blocked'}>
+        <AlertDialogContent className="border-border bg-surface">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>You have edits that haven't been saved. Leaving now will lose them.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border" onClick={() => blocker.reset?.()}>Stay</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 text-white hover:bg-red-700" onClick={() => blocker.proceed?.()}>Leave</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="mb-6 flex items-center gap-4 rounded-2xl border border-border bg-surface p-5">
         <AvatarInitials seed={form.avatarSeed} className="size-14" />
@@ -480,7 +561,7 @@ function ProfilePage() {
           </div>
           <Button
             onClick={() => save('Personal details saved')}
-            disabled={saving || !personalDirty || !!errors.name || !!errors.phone}
+            disabled={saving || !dirty.personal || !!errors.name || !!errors.phone}
             className="bg-accent-indigo text-white hover:bg-accent-indigo-soft"
           >
             {saving ? 'Saving…' : 'Save Changes'}
@@ -604,7 +685,7 @@ function ProfilePage() {
           </div>
           <Button
             onClick={() => save('Emergency contact saved')}
-            disabled={saving || !emergencyDirty || !!errors.emName || !!errors.emRelation || !!errors.emPhone}
+            disabled={saving || !dirty.emergency || !!errors.emName || !!errors.emRelation || !!errors.emPhone}
             className="bg-accent-indigo text-white hover:bg-accent-indigo-soft"
           >
             {saving ? 'Saving…' : 'Save Changes'}
@@ -672,14 +753,16 @@ function ProfilePage() {
           </div>
           <Button
             onClick={() => save('Preferences saved')}
-            disabled={saving || !prefsDirty}
+            disabled={saving || !dirty.prefs}
             className="bg-accent-indigo text-white hover:bg-accent-indigo-soft"
           >
             {saving ? 'Saving…' : 'Save Changes'}
           </Button>
         </TabsContent>
 
-        <TabsContent value="security" className="rounded-2xl border border-border bg-surface p-5">
+        <TabsContent value="security" className="space-y-8 rounded-2xl border border-border bg-surface p-5">
+          <EmailSection />
+          <div className="border-t border-border" />
           <SecuritySection />
         </TabsContent>
       </Tabs>

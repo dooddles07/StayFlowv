@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as MemberRouteImport } from './routes/member'
@@ -42,6 +43,11 @@ import { Route as MemberDiningIndexRouteImport } from './routes/member/dining/in
 import { Route as MemberFacilitiesIdRouteImport } from './routes/member/facilities/$id'
 import { Route as MemberDiningIdRouteImport } from './routes/member/dining/$id'
 
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StaffRoute = StaffRouteImport.update({
   id: '/staff',
   path: '/staff',
@@ -210,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/member': typeof MemberRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/staff': typeof StaffRouteWithChildren
+  '/verify-email': typeof VerifyEmailRoute
   '/login/management': typeof LoginManagementRoute
   '/login/member': typeof LoginMemberRoute
   '/login/staff': typeof LoginStaffRoute
@@ -241,6 +248,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/login/management': typeof LoginManagementRoute
   '/login/member': typeof LoginMemberRoute
   '/login/staff': typeof LoginStaffRoute
@@ -276,6 +284,7 @@ export interface FileRoutesById {
   '/member': typeof MemberRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/staff': typeof StaffRouteWithChildren
+  '/verify-email': typeof VerifyEmailRoute
   '/login/management': typeof LoginManagementRoute
   '/login/member': typeof LoginMemberRoute
   '/login/staff': typeof LoginStaffRoute
@@ -312,6 +321,7 @@ export interface FileRouteTypes {
     | '/member'
     | '/reset-password'
     | '/staff'
+    | '/verify-email'
     | '/login/management'
     | '/login/member'
     | '/login/staff'
@@ -343,6 +353,7 @@ export interface FileRouteTypes {
     | '/'
     | '/forgot-password'
     | '/reset-password'
+    | '/verify-email'
     | '/login/management'
     | '/login/member'
     | '/login/staff'
@@ -377,6 +388,7 @@ export interface FileRouteTypes {
     | '/member'
     | '/reset-password'
     | '/staff'
+    | '/verify-email'
     | '/login/management'
     | '/login/member'
     | '/login/staff'
@@ -412,6 +424,7 @@ export interface RootRouteChildren {
   MemberRoute: typeof MemberRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   StaffRoute: typeof StaffRouteWithChildren
+  VerifyEmailRoute: typeof VerifyEmailRoute
   LoginManagementRoute: typeof LoginManagementRoute
   LoginMemberRoute: typeof LoginMemberRoute
   LoginStaffRoute: typeof LoginStaffRoute
@@ -419,6 +432,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/staff': {
       id: '/staff'
       path: '/staff'
@@ -726,6 +746,7 @@ const rootRouteChildren: RootRouteChildren = {
   MemberRoute: MemberRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   StaffRoute: StaffRouteWithChildren,
+  VerifyEmailRoute: VerifyEmailRoute,
   LoginManagementRoute: LoginManagementRoute,
   LoginMemberRoute: LoginMemberRoute,
   LoginStaffRoute: LoginStaffRoute,

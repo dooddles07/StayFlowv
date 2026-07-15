@@ -6,7 +6,7 @@ import { UserModel } from '../models/user.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { AuthEventType, logAuthEvent } from '../utils/authLog.js'
-import { deliverResetToken } from '../utils/mailer.js'
+import { deliverEmailChange, deliverResetToken } from '../utils/mailer.js'
 
 const signToken = (user) =>
   jwt.sign(
@@ -36,6 +36,8 @@ const LOCK_DURATION_MS = 15 * 60 * 1000
 
 const BCRYPT_ROUNDS = 12
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000
+const EMAIL_TOKEN_TTL_MS = 60 * 60 * 1000
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MIN_PASSWORD_LENGTH = 8
 // bcrypt silently truncates input past 72 bytes — reject longer so the stored hash matches what the user typed.
 const MAX_PASSWORD_LENGTH = 72
@@ -166,6 +168,57 @@ export const me = asyncHandler(async (req, res) => {
   const user = await UserModel.findById(req.user.sub)
   if (!user) throw ApiError.notFound('User not found')
   res.json(sanitize(user))
+})
+
+// Step 1 of email change: authenticated user proves their password and names a new
+// address. Nothing changes yet — a token goes to the NEW address to prove they own it.
+export const requestEmailChange = asyncHandler(async (req, res) => {
+  const { newEmail, currentPassword } = req.body
+  if (!newEmail || !currentPassword) throw ApiError.badRequest('newEmail and currentPassword are required')
+  const email = String(newEmail).trim().toLowerCase()
+  if (!EMAIL_RE.test(email)) throw ApiError.badRequest('Enter a valid email address')
+
+  const user = await UserModel.findById(req.user.sub)
+  if (!user) throw ApiError.notFound('User not found')
+  if (email === user.email.toLowerCase()) throw ApiError.badRequest('That is already your email address')
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash)
+  if (!valid) throw ApiError.unauthorized('Current password is incorrect')
+
+  const [emailTaken, pendingTaken] = await Promise.all([
+    UserModel.findByEmail(email),
+    UserModel.findByPendingEmail(email),
+  ])
+  if (emailTaken || (pendingTaken && pendingTaken.id !== user.id)) throw ApiError.conflict('That email is already in use')
+
+  const rawToken = crypto.randomBytes(32).toString('hex')
+  await UserModel.setEmailChangeToken(user.id, email, hashResetToken(rawToken), new Date(Date.now() + EMAIL_TOKEN_TTL_MS))
+  await deliverEmailChange(user, email, rawToken)
+  logAuthEvent(req, AuthEventType.EMAIL_CHANGE_REQUEST, { userId: user.id, email: user.email })
+
+  res.json({ message: `Verification link sent to ${email}. Open it to confirm the change.` })
+})
+
+// Step 2: the link (public, token-bearing) is opened. Apply the pending email and sign
+// every session out — the login identity just changed.
+export const confirmEmailChange = asyncHandler(async (req, res) => {
+  const { token } = req.body
+  if (!token) throw ApiError.badRequest('token is required')
+
+  const user = await UserModel.findByEmailTokenHash(hashResetToken(token))
+  if (!user || !user.pendingEmail || !user.emailTokenExpiresAt || user.emailTokenExpiresAt < new Date()) {
+    throw ApiError.badRequest('Invalid or expired verification link')
+  }
+
+  try {
+    await UserModel.applyEmailChange(user)
+  } catch (err) {
+    if (err.code === 'P2002') throw ApiError.conflict('That email is already in use')
+    throw err
+  }
+  logAuthEvent(req, AuthEventType.EMAIL_CHANGE_SUCCESS, { userId: user.id, email: user.pendingEmail })
+
+  res.json({ message: 'Email updated. Please sign in with your new email address.' })
 })
 
 export const changePassword = asyncHandler(async (req, res) => {

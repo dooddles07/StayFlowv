@@ -279,6 +279,11 @@ model User {
   resetTokenHash      String?   @unique
   resetTokenExpiresAt DateTime?
 
+  // Email change stays pending until the user clicks the link sent to the NEW address.
+  pendingEmail        String?   @unique
+  emailTokenHash      String?   @unique
+  emailTokenExpiresAt DateTime?
+
   residentId String?      @unique
   resident   Resident?    @relation(fields: [residentId], references: [id])
   staffId    String?      @unique
