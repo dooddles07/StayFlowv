@@ -7,7 +7,7 @@ export const facilities: Facility[] = [
     category: 'Wellness',
     description: 'A heated infinity-edge pool on the 40th floor with panoramic skyline views, cabanas, and poolside service.',
     rules: ['Children under 12 must be supervised', 'No glass containers poolside', 'Swim attire required', 'Maximum 90-minute sessions during peak hours'],
-    image: '/images/facilities/pool.svg',
+    image: '/images/facilities/pool.png',
     capacity: 24,
     openHours: '6:00 AM – 10:00 PM',
     status: 'open',
