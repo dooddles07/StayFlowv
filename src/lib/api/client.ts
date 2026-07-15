@@ -13,6 +13,8 @@ export class ApiError extends Error {
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
+    // Send/receive the httpOnly auth cookie (the JWT is no longer stored in JS).
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,

@@ -19,33 +19,40 @@ interface AuthUser {
 }
 
 interface LoginResponse {
-  token: string
   user: AuthUser
 }
 
 interface AuthState {
-  token: string | null
   user: AuthUser | null
   hasHydrated: boolean
   login: (email: string, password: string) => Promise<AuthUser>
-  logout: () => void
+  logout: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      token: null,
       user: null,
       hasHydrated: false,
+      // The JWT lives in an httpOnly cookie set by the server — never stored in JS.
+      // Only the non-sensitive user profile is persisted, purely for portal-gating UX.
       login: async (email, password) => {
-        const { token, user } = await api.post<LoginResponse>('/auth/login', { email, password })
-        set({ token, user })
+        const { user } = await api.post<LoginResponse>('/auth/login', { email, password })
+        set({ user })
         return user
       },
-      logout: () => set({ token: null, user: null }),
+      logout: async () => {
+        try {
+          await api.post('/auth/logout', {})
+        } catch {
+          // Clear local state regardless of network outcome.
+        }
+        set({ user: null })
+      },
     }),
     {
       name: 'stayflow.auth',
+      partialize: (state) => ({ user: state.user }),
       onRehydrateStorage: () => (state) => {
         if (state) state.hasHydrated = true
       },

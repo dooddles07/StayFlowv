@@ -66,8 +66,8 @@ export function Sidebar({ portal, identityName, identitySubtitle, onNavigate, cl
         </div>
         <button
           type="button"
-          onClick={() => {
-            logout()
+          onClick={async () => {
+            await logout()
             clearStoredPortal()
             navigate({ to: `/login/${portal}` })
           }}

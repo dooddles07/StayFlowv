@@ -4,12 +4,28 @@ import { UserModel } from '../models/user.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 
-export const requireAuth = asyncHandler(async (req, res, next) => {
-  const header = req.headers.authorization
-  if (!header || !header.startsWith('Bearer ')) {
-    throw ApiError.unauthorized('Missing bearer token')
+const AUTH_COOKIE = 'stayflow_token'
+
+const readCookie = (req, name) => {
+  const raw = req.headers.cookie
+  if (!raw) return null
+  for (const part of raw.split(';')) {
+    const idx = part.indexOf('=')
+    if (idx === -1) continue
+    if (part.slice(0, idx).trim() === name) return decodeURIComponent(part.slice(idx + 1).trim())
   }
-  const token = header.slice('Bearer '.length)
+  return null
+}
+
+const extractToken = (req) => {
+  const header = req.headers.authorization
+  if (header && header.startsWith('Bearer ')) return header.slice('Bearer '.length)
+  return readCookie(req, AUTH_COOKIE)
+}
+
+export const requireAuth = asyncHandler(async (req, res, next) => {
+  const token = extractToken(req)
+  if (!token) throw ApiError.unauthorized('Missing authentication token')
   let payload
   try {
     payload = jwt.verify(token, env.jwtSecret)

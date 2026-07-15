@@ -7,10 +7,20 @@ for (const key of required) {
   }
 }
 
+const isProd = process.env.NODE_ENV === 'production'
+
+// Fail closed: no wildcard default. Unset CORS_ORIGIN => [] (only same-origin allowed,
+// which never triggers CORS anyway). Cross-origin access requires an explicit allowlist.
+const corsOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean)
+
 export const env = {
+  isProd,
   port: Number(process.env.PORT) || 4000,
   databaseUrl: process.env.DATABASE_URL,
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  corsOrigins: (process.env.CORS_ORIGIN || '*').split(',').map((o) => o.trim()),
+  corsOrigins,
 }

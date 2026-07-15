@@ -37,7 +37,7 @@ export function LoginForm({ portal, portalLabel, className, submitClassName }: L
     try {
       const user = await login(email, password)
       if (!isPortalRoleMatch(user.role, portal)) {
-        useAuthStore.getState().logout()
+        await useAuthStore.getState().logout()
         setError(`That account isn't a ${portalLabel} account. Use the correct portal login.`)
         return
       }
