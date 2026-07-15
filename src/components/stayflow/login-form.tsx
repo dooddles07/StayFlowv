@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
@@ -66,7 +66,15 @@ export function LoginForm({ portal, portalLabel, className, submitClassName }: L
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`${portal}-password`}>Password</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor={`${portal}-password`}>Password</Label>
+          <Link
+            to="/forgot-password"
+            className="text-xs font-medium text-muted-text underline-offset-4 transition-colors hover:text-foreground hover:underline"
+          >
+            Forgot password?
+          </Link>
+        </div>
         <Input
           id={`${portal}-password`}
           type="password"

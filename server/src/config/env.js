@@ -23,4 +23,6 @@ export const env = {
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   corsOrigins,
+  // Base URL of the frontend, used to build password-reset links.
+  appUrl: process.env.APP_URL || corsOrigins[0] || 'http://localhost:3000',
 }

@@ -1,9 +1,11 @@
+import crypto from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { env } from '../config/env.js'
 import { UserModel } from '../models/user.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
+import { deliverResetToken } from '../utils/mailer.js'
 
 const signToken = (user) =>
   jwt.sign(
@@ -30,6 +32,10 @@ const setAuthCookie = (res, token) => res.cookie(AUTH_COOKIE, token, cookieOptio
 // Per-account (survives IP rotation) — defends credential stuffing the per-IP limiter can't.
 const LOCK_THRESHOLD = 5
 const LOCK_DURATION_MS = 15 * 60 * 1000
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000
+const MIN_PASSWORD_LENGTH = 8
+const hashResetToken = (raw) => crypto.createHash('sha256').update(raw).digest('hex')
 
 // Strip password hash and all internal auth bookkeeping from API responses.
 const sanitize = (user) => {
@@ -87,6 +93,41 @@ export const login = asyncHandler(async (req, res) => {
 export const logout = asyncHandler(async (req, res) => {
   res.clearCookie(AUTH_COOKIE, { ...cookieOptions, maxAge: undefined })
   res.status(204).send()
+})
+
+const GENERIC_RESET_RESPONSE = { message: 'If an account exists for that email, a password reset link has been sent.' }
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body
+  if (!email) throw ApiError.badRequest('email is required')
+
+  const user = await UserModel.findByEmail(email)
+  // Only act when the account exists, but always return the same response to prevent enumeration.
+  if (user) {
+    const rawToken = crypto.randomBytes(32).toString('hex')
+    await UserModel.setResetToken(user.id, hashResetToken(rawToken), new Date(Date.now() + RESET_TOKEN_TTL_MS))
+    await deliverResetToken(user, rawToken)
+  }
+
+  res.json(GENERIC_RESET_RESPONSE)
+})
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token, password } = req.body
+  if (!token || !password) throw ApiError.badRequest('token and password are required')
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    throw ApiError.badRequest(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+  }
+
+  const user = await UserModel.findByResetTokenHash(hashResetToken(token))
+  if (!user || !user.resetTokenExpiresAt || user.resetTokenExpiresAt < new Date()) {
+    throw ApiError.badRequest('Invalid or expired reset token')
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10)
+  await UserModel.applyPasswordReset(user.id, passwordHash)
+  // tokenVersion was bumped, so any existing sessions are now revoked — user must sign in again.
+  res.json({ message: 'Password updated. Please sign in with your new password.' })
 })
 
 export const me = asyncHandler(async (req, res) => {
