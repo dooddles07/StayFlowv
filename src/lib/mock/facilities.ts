@@ -46,7 +46,7 @@ export const facilities: Facility[] = [
     category: 'Sports',
     description: 'Regulation hard court with night lighting, ball machine rental, and pro coaching available.',
     rules: ['Proper tennis shoes required', 'Court time limited to 60 minutes when others are waiting'],
-    image: '/images/facilities/tennis.svg',
+    image: '/images/facilities/tennis.png',
     capacity: 4,
     openHours: '6:00 AM – 10:00 PM',
     status: 'maintenance',
