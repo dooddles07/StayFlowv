@@ -86,7 +86,7 @@ export const facilities: Facility[] = [
     category: 'Wellness',
     description: 'Full spa suite with sauna, steam room, cold plunge, and treatment rooms for massage therapy.',
     rules: ['Minimum age 16', 'Towels provided', 'Treatments by appointment only'],
-    image: '/images/facilities/spa.svg',
+    image: '/images/facilities/spa.png',
     capacity: 12,
     openHours: '7:00 AM – 9:00 PM',
     status: 'open',
