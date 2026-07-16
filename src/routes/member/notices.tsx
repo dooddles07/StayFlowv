@@ -70,6 +70,8 @@ function NoticesPage() {
     .filter((n) => category === 'All' || n.category === category)
     .filter((n) => q === '' || n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q))
     .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.postedAt.localeCompare(a.postedAt))
+  const pinned = visible.filter((n) => n.pinned)
+  const rest = visible.filter((n) => !n.pinned)
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -112,10 +114,25 @@ function NoticesPage() {
       ) : visible.length === 0 ? (
         <EmptyState icon={Megaphone} title={q ? 'No notices match your search' : 'No notices in this category'} />
       ) : (
-        <div className="space-y-3">
-          {visible.map((notice) => (
-            <NoticeCard key={notice.id} notice={notice} isNew={isNew(notice)} />
-          ))}
+        <div className="space-y-6">
+          {pinned.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent-gold">Pinned</p>
+              {pinned.map((notice) => (
+                <NoticeCard key={notice.id} notice={notice} isNew={isNew(notice)} />
+              ))}
+            </div>
+          )}
+          {rest.length > 0 && (
+            <div className="space-y-3">
+              {pinned.length > 0 && (
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-text">More notices</p>
+              )}
+              {rest.map((notice) => (
+                <NoticeCard key={notice.id} notice={notice} isNew={isNew(notice)} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

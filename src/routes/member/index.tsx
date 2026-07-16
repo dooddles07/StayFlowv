@@ -4,7 +4,7 @@ import { CalendarPlus, CloudSun, Sunset, UserPlus, UtensilsCrossed, Waves } from
 import { SectionHeader } from '#/components/stayflow/section-header'
 import { ReservationRow } from '#/components/stayflow/reservation-row'
 import { FacilityCard } from '#/components/stayflow/facility-card'
-import { NoticeItem } from '#/components/stayflow/notice-item'
+import { NoticeCard } from '#/components/stayflow/notice-card'
 import { QuickActionCard } from '#/components/stayflow/quick-action-card'
 import { EmptyState } from '#/components/stayflow/empty-state'
 import { useMockStore } from '#/lib/store/mock-store'
@@ -116,7 +116,7 @@ function MemberDashboard() {
           <SectionHeader title="Community Notices" viewAllHref="/member/notices" />
           <div className="space-y-3">
             {topNotices.map((notice) => (
-              <NoticeItem key={notice.id} notice={notice} />
+              <NoticeCard key={notice.id} notice={notice} />
             ))}
           </div>
         </div>
