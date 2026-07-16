@@ -23,12 +23,14 @@ import {
 } from '#/components/ui/alert-dialog'
 import type { CommunityEventView } from '#/lib/api/event'
 
+const eventTimeRange = (event: CommunityEventView) => (event.endTime ? `${event.time} – ${event.endTime}` : event.time)
+
 function EventMeta({ event, spotsLeft }: { event: CommunityEventView; spotsLeft: number }) {
   return (
     <div className="space-y-1 text-[11px] text-muted-text/80">
       <p className="flex items-center gap-1.5">
         <Calendar className="size-3.5" />
-        {format(parseISO(event.date), 'EEE, MMM d')} · {event.time}
+        {format(parseISO(event.date), 'EEE, MMM d')} · {eventTimeRange(event)}
       </p>
       <p className="flex items-center gap-1.5">
         <MapPin className="size-3.5" />
@@ -81,7 +83,7 @@ export function EventCard({
             <span className="mb-1 w-fit rounded-full bg-accent-gold/15 px-2 py-0.5 text-[11px] font-medium text-accent-gold">{event.category}</span>
             <DialogTitle>{event.title}</DialogTitle>
             <DialogDescription className="text-muted-text">
-              {format(parseISO(event.date), 'EEEE, MMMM d, yyyy')} · {event.time} · {event.location}
+              {format(parseISO(event.date), 'EEEE, MMMM d, yyyy')} · {eventTimeRange(event)} · {event.location}
             </DialogDescription>
           </DialogHeader>
           <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">{event.description}</p>

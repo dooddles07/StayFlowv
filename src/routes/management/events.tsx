@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
 import { toast } from 'sonner'
 import { format, parseISO } from 'date-fns'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { PageHeader } from '#/components/stayflow/page-header'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -32,6 +32,28 @@ const categories: EventCategory[] = ['Social', 'Wellness', 'Kids', 'Seasonal', '
 const errText = (err: unknown) => (err instanceof ApiError ? err.message : 'Something went wrong. Try again.')
 const DEFAULT_EVENT_IMAGE = '/images/events/wine-tasting.webp'
 const eventDate = (iso: string) => format(parseISO(iso), 'MMM d, yyyy')
+const eventTimeRange = (event: CommunityEventView) => (event.endTime ? `${event.time} – ${event.endTime}` : event.time)
+
+// Real community spaces (from the facilities list + past events), so staff pick a place
+// instead of retyping it. "Other" reveals a free-text field for anything not listed.
+const LOCATION_OPTIONS = [
+  'Infinity Sky Pool',
+  'Apex Fitness Studio',
+  'Aurora Screening Room',
+  'Championship Tennis Court',
+  'Serenity Yoga Deck',
+  'The Grand Function Room',
+  'Serenity Spa & Sauna',
+  'Junior Play Lounge',
+  'Skyline Tower · Rooftop',
+  "Koi & Copper · Private Room",
+]
+const OTHER_LOCATION = 'Other'
+
+// Max size (before base64 inflates it ~33%) for a photo uploaded from a device. Photos are
+// stored as data URIs directly in the database (no file storage service configured), so this
+// keeps individual event rows reasonable rather than a hard technical ceiling.
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024
 
 interface EventDraft {
   id?: string
@@ -41,6 +63,7 @@ interface EventDraft {
   image: string
   date: string
   time: string
+  endTime: string
   location: string
   capacity: number
 }
@@ -53,9 +76,19 @@ function newDraft(): EventDraft {
     image: '',
     date: new Date().toISOString().slice(0, 10),
     time: '6:00 PM',
+    endTime: '',
     location: '',
     capacity: 20,
   }
+}
+
+function readImageFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(new Error('Could not read that file.'))
+    reader.readAsDataURL(file)
+  })
 }
 
 function ManagementEventsPage() {
@@ -64,6 +97,7 @@ function ManagementEventsPage() {
   const [editing, setEditing] = React.useState<EventDraft | null>(null)
   const [deleteTarget, setDeleteTarget] = React.useState<CommunityEventView | null>(null)
   const [saving, setSaving] = React.useState(false)
+  const photoInputRef = React.useRef<HTMLInputElement>(null)
 
   const load = React.useCallback(() => {
     let active = true
@@ -109,6 +143,7 @@ function ManagementEventsPage() {
         // a full ISO datetime, or Prisma rejects it with an unhandled validation error.
         date: new Date(editing.date).toISOString(),
         time: editing.time.trim(),
+        endTime: editing.endTime.trim() || null,
         location: editing.location.trim(),
         capacity: editing.capacity,
       }
@@ -178,7 +213,7 @@ function ManagementEventsPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-medium text-foreground">{event.title}</p>
-                    <p className="text-xs text-muted-text">{event.category} · {eventDate(event.date)} · {event.time}</p>
+                    <p className="text-xs text-muted-text">{event.category} · {eventDate(event.date)} · {eventTimeRange(event)}</p>
                   </div>
                   <span className="shrink-0 text-xs text-muted-text">{event.attendeeIds.length}/{event.capacity}</span>
                 </div>
@@ -188,7 +223,7 @@ function ManagementEventsPage() {
                     variant="ghost"
                     className="size-7 text-muted-text hover:text-foreground"
                     aria-label={`Edit ${event.title}`}
-                    onClick={() => setEditing({ ...event })}
+                    onClick={() => setEditing({ ...event, date: event.date.slice(0, 10), endTime: event.endTime ?? '' })}
                   >
                     <Pencil className="size-3.5" />
                   </Button>
@@ -222,7 +257,7 @@ function ManagementEventsPage() {
                   <tr key={event.id}>
                     <td className="px-4 py-3 font-medium text-foreground">{event.title}</td>
                     <td className="px-4 py-3 text-muted-text">{event.category}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-muted-text">{eventDate(event.date)} · {event.time}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-muted-text">{eventDate(event.date)} · {eventTimeRange(event)}</td>
                     <td className="px-4 py-3 text-muted-text">{event.attendeeIds.length} / {event.capacity}</td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1.5">
@@ -231,7 +266,7 @@ function ManagementEventsPage() {
                           variant="ghost"
                           className="size-7 text-muted-text hover:text-foreground"
                           aria-label={`Edit ${event.title}`}
-                          onClick={() => setEditing({ ...event })}
+                          onClick={() => setEditing({ ...event, date: event.date.slice(0, 10), endTime: event.endTime ?? '' })}
                         >
                           <Pencil className="size-3.5" />
                         </Button>
@@ -287,10 +322,46 @@ function ManagementEventsPage() {
                   <Input
                     value={editing.image}
                     onChange={(e) => setEditing({ ...editing, image: e.target.value })}
-                    placeholder="Paste a photo link, or leave blank for a default picture"
+                    placeholder="Paste a photo link, or upload one"
                     className="border-border bg-canvas"
                   />
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      e.target.value = ''
+                      if (!file) return
+                      if (!file.type.startsWith('image/')) {
+                        toast.error('Please choose an image file.')
+                        return
+                      }
+                      if (file.size > MAX_PHOTO_BYTES) {
+                        toast.error('That photo is too large — please use one under 2 MB.')
+                        return
+                      }
+                      try {
+                        const dataUrl = await readImageFile(file)
+                        setEditing((prev) => (prev ? { ...prev, image: dataUrl } : prev))
+                      } catch {
+                        toast.error('Could not read that photo. Try a different file.')
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-11 shrink-0 border-border"
+                    aria-label="Upload a photo from your device"
+                    onClick={() => photoInputRef.current?.click()}
+                  >
+                    <Upload className="size-4" />
+                  </Button>
                 </div>
+                <p className="mt-1.5 text-[11px] text-muted-text/70">Paste a link above, or use the upload button to choose a photo from your phone or computer.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -313,19 +384,48 @@ function ManagementEventsPage() {
                   <Input type="number" min={1} value={editing.capacity} onChange={(e) => setEditing({ ...editing, capacity: Number(e.target.value) || 0 })} className="border-border bg-canvas" />
                 </div>
               </div>
+              <div>
+                <Label className="mb-1.5 text-xs text-muted-text">Date</Label>
+                <Input type="date" value={editing.date} onChange={(e) => setEditing({ ...editing, date: e.target.value })} className="border-border bg-canvas" />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="mb-1.5 text-xs text-muted-text">Date</Label>
-                  <Input type="date" value={editing.date} onChange={(e) => setEditing({ ...editing, date: e.target.value })} className="border-border bg-canvas" />
+                  <Label className="mb-1.5 text-xs text-muted-text">Start time</Label>
+                  <Input value={editing.time} onChange={(e) => setEditing({ ...editing, time: e.target.value })} className="border-border bg-canvas" />
                 </div>
                 <div>
-                  <Label className="mb-1.5 text-xs text-muted-text">Time</Label>
-                  <Input value={editing.time} onChange={(e) => setEditing({ ...editing, time: e.target.value })} className="border-border bg-canvas" />
+                  <Label className="mb-1.5 text-xs text-muted-text">
+                    End time <span className="font-normal text-muted-text/70">· optional</span>
+                  </Label>
+                  <Input value={editing.endTime} onChange={(e) => setEditing({ ...editing, endTime: e.target.value })} className="border-border bg-canvas" />
                 </div>
               </div>
               <div>
                 <Label className="mb-1.5 text-xs text-muted-text">Location</Label>
-                <Input value={editing.location} onChange={(e) => setEditing({ ...editing, location: e.target.value })} className="border-border bg-canvas" />
+                <Select
+                  value={LOCATION_OPTIONS.includes(editing.location) ? editing.location : OTHER_LOCATION}
+                  onValueChange={(v) => setEditing({ ...editing, location: v === OTHER_LOCATION ? '' : v })}
+                >
+                  <SelectTrigger className="border-border bg-canvas">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="border-border bg-surface text-foreground">
+                    {LOCATION_OPTIONS.map((l) => (
+                      <SelectItem key={l} value={l}>
+                        {l}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={OTHER_LOCATION}>Other (type your own)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {!LOCATION_OPTIONS.includes(editing.location) && (
+                  <Input
+                    value={editing.location}
+                    onChange={(e) => setEditing({ ...editing, location: e.target.value })}
+                    placeholder="Enter the location"
+                    className="mt-2 border-border bg-canvas"
+                  />
+                )}
               </div>
               <Button className="w-full bg-accent-indigo text-white hover:bg-accent-indigo-soft" disabled={saving} onClick={save}>
                 {saving ? 'Saving…' : 'Save Event'}

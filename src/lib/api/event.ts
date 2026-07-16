@@ -16,6 +16,7 @@ interface EventApiResponse {
   image: string
   date: string
   time: string
+  endTime: string | null
   location: string
   capacity: number
   rsvps: EventRsvpRow[]
@@ -30,6 +31,7 @@ export interface CommunityEventView {
   image: string
   date: string
   time: string
+  endTime: string | null
   location: string
   capacity: number
   attendeeIds: string[]
@@ -43,6 +45,7 @@ const toEvent = (e: EventApiResponse): CommunityEventView => ({
   image: e.image,
   date: e.date,
   time: e.time,
+  endTime: e.endTime,
   location: e.location,
   capacity: e.capacity,
   // Defensive: an endpoint that forgets to include the rsvps relation shouldn't crash the mapper.
@@ -64,6 +67,7 @@ export interface EventInput {
   image: string
   date: string
   time: string
+  endTime: string | null
   location: string
   capacity: number
 }

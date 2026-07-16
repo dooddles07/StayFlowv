@@ -229,6 +229,7 @@ model CommunityEvent {
   image       String
   date        DateTime @db.Date
   time        String
+  endTime     String?
   location    String
   capacity    Int
 
