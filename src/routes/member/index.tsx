@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import * as React from 'react'
 import { CalendarPlus, CloudSun, Sunset, UserPlus, UtensilsCrossed, Waves } from 'lucide-react'
 import { SectionHeader } from '#/components/stayflow/section-header'
 import { ReservationRow } from '#/components/stayflow/reservation-row'
@@ -7,8 +8,10 @@ import { NoticeItem } from '#/components/stayflow/notice-item'
 import { QuickActionCard } from '#/components/stayflow/quick-action-card'
 import { EmptyState } from '#/components/stayflow/empty-state'
 import { useMockStore } from '#/lib/store/mock-store'
+import { getNotices } from '#/lib/api/notice'
 import { CURRENT_RESIDENT_ID } from '#/lib/session'
 import { getResidentById } from '#/lib/mock/residents'
+import type { Notice } from '#/lib/mock/types'
 
 export const Route = createFileRoute('/member/')({
   head: () => ({ meta: [{ title: 'Dashboard — StayFlow Member' }] }),
@@ -26,7 +29,20 @@ function MemberDashboard() {
     .slice(0, 4)
 
   const featuredFacilities = state.facilities.filter((f) => f.status === 'open').slice(0, 3)
-  const topNotices = [...state.notices].sort((a, b) => Number(b.pinned) - Number(a.pinned)).slice(0, 3)
+
+  const [notices, setNotices] = React.useState<Notice[]>([])
+  React.useEffect(() => {
+    let active = true
+    getNotices()
+      .then((data) => active && setNotices(data))
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
+  const topNotices = [...notices]
+    .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.postedAt.localeCompare(a.postedAt))
+    .slice(0, 3)
 
   return (
     <div className="mx-auto max-w-7xl">

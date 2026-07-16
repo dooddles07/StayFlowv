@@ -27,7 +27,7 @@ function CategoryBadge({ category }: { category: NoticeCategory }) {
 }
 
 // Summary card that opens a dialog with the full, untruncated notice.
-export function NoticeCard({ notice }: { notice: Notice }) {
+export function NoticeCard({ notice, isNew = false }: { notice: Notice; isNew?: boolean }) {
   const posted = new Date(notice.postedAt)
   return (
     <Dialog>
@@ -37,7 +37,12 @@ export function NoticeCard({ notice }: { notice: Notice }) {
           className="w-full animate-fade-in rounded-2xl border border-border bg-surface p-4 text-left transition-colors hover:border-accent-indigo/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-indigo/50"
         >
           <div className="mb-2 flex items-center justify-between gap-2">
-            <CategoryBadge category={notice.category} />
+            <div className="flex items-center gap-2">
+              <CategoryBadge category={notice.category} />
+              {isNew && (
+                <span className="rounded-full bg-accent-indigo px-2 py-0.5 text-[10px] font-semibold text-white">New</span>
+              )}
+            </div>
             {notice.pinned && <Pin className="size-3.5 fill-current text-accent-gold" />}
           </div>
           <p className="text-sm font-medium text-foreground">{notice.title}</p>

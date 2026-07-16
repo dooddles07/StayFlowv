@@ -3,7 +3,6 @@ import { bookings as seedBookings } from '#/lib/mock/bookings'
 import { diningReservations as seedDiningReservations } from '#/lib/mock/diningReservations'
 import { guests as seedGuests } from '#/lib/mock/guests'
 import { events as seedEvents } from '#/lib/mock/events'
-import { notices as seedNotices } from '#/lib/mock/notices'
 import { notifications as seedNotifications } from '#/lib/mock/notifications'
 import { facilities as seedFacilities } from '#/lib/mock/facilities'
 import { restaurants as seedRestaurants } from '#/lib/mock/restaurants'
@@ -20,7 +19,6 @@ import type {
   FacilityStatus,
   Guest,
   GuestStatus,
-  Notice,
   Resident,
   Restaurant,
   StaffMember,
@@ -37,7 +35,6 @@ export interface MockState {
   diningReservations: DiningReservation[]
   guests: Guest[]
   events: CommunityEvent[]
-  notices: Notice[]
   notifications: AppNotification[]
 }
 
@@ -51,7 +48,6 @@ function seedState(): MockState {
     diningReservations: seedDiningReservations,
     guests: seedGuests,
     events: seedEvents,
-    notices: seedNotices,
     notifications: seedNotifications,
   }
 }
@@ -71,9 +67,6 @@ type Action =
   | { type: 'ADD_EVENT'; payload: CommunityEvent }
   | { type: 'UPDATE_EVENT'; payload: CommunityEvent }
   | { type: 'DELETE_EVENT'; payload: { id: string } }
-  | { type: 'ADD_NOTICE'; payload: Notice }
-  | { type: 'UPDATE_NOTICE'; payload: Notice }
-  | { type: 'DELETE_NOTICE'; payload: { id: string } }
   | { type: 'UPDATE_FACILITY_STATUS'; payload: { id: string; status: FacilityStatus; reason?: string } }
   | { type: 'ADD_FACILITY'; payload: Facility }
   | { type: 'UPDATE_FACILITY'; payload: Facility }
@@ -144,12 +137,6 @@ function reducer(state: MockState, action: Action): MockState {
       return { ...state, events: state.events.map((e) => (e.id === action.payload.id ? action.payload : e)) }
     case 'DELETE_EVENT':
       return { ...state, events: state.events.filter((e) => e.id !== action.payload.id) }
-    case 'ADD_NOTICE':
-      return { ...state, notices: [action.payload, ...state.notices] }
-    case 'UPDATE_NOTICE':
-      return { ...state, notices: state.notices.map((n) => (n.id === action.payload.id ? action.payload : n)) }
-    case 'DELETE_NOTICE':
-      return { ...state, notices: state.notices.filter((n) => n.id !== action.payload.id) }
     case 'UPDATE_FACILITY_STATUS':
       return {
         ...state,

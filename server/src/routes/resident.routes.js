@@ -17,6 +17,8 @@ router.post('/me/vehicles', residentSelfController.addVehicle)
 router.put('/me/vehicles/:id', residentSelfController.updateVehicle)
 router.delete('/me/vehicles/:id', residentSelfController.removeVehicle)
 
+router.post('/me/notices-seen', residentSelfController.markNoticesSeen)
+
 router.use(
   buildCrudRouter(residentController, {
     readRoles: ['STAFF', 'MANAGEMENT'],

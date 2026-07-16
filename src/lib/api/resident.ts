@@ -37,6 +37,7 @@ interface ResidentApiResponse {
   emergency2Name: string | null
   emergency2Relation: string | null
   emergency2Phone: string | null
+  noticesLastSeenAt: string | null
   family: ResidentFamilyMember[]
   vehicles: ResidentVehicle[]
 }
@@ -52,6 +53,7 @@ export interface ResidentProfile {
   avatarSeed: string
   avatarStyle: string | null
   moveInDate: string
+  noticesLastSeenAt: string | null
   family: ResidentFamilyMember[]
   vehicles: ResidentVehicle[]
   emergencyContact: { name: string; relation: string; phone: string }
@@ -87,6 +89,7 @@ const toProfile = (r: ResidentApiResponse): ResidentProfile => ({
   avatarSeed: r.avatarSeed,
   avatarStyle: r.avatarStyle,
   moveInDate: r.moveInDate,
+  noticesLastSeenAt: r.noticesLastSeenAt,
   family: r.family,
   vehicles: r.vehicles,
   emergencyContact: { name: r.emergencyName, relation: r.emergencyRelation, phone: r.emergencyPhone },
@@ -142,3 +145,7 @@ export const updateVehicle = (id: string, data: VehicleInput) =>
 
 export const removeVehicle = (id: string) =>
   api.del<ResidentApiResponse>(`/residents/me/vehicles/${id}`).then(toProfile)
+
+// Marks the notices feed as read up to now (server stamps the time).
+export const markNoticesSeen = () =>
+  api.post<ResidentApiResponse>('/residents/me/notices-seen', {}).then(toProfile)

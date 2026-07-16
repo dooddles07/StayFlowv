@@ -116,4 +116,11 @@ export const residentSelfController = {
     await ResidentModel.removeVehicle(req.params.id)
     res.json(await ResidentModel.findById(residentId))
   }),
+
+  // Stamp the notices feed as seen "now" (server-controlled timestamp, not client-supplied).
+  markNoticesSeen: asyncHandler(async (req, res) => {
+    const residentId = requireLinkedResidentId(req)
+    const resident = await ResidentModel.update(residentId, { noticesLastSeenAt: new Date() })
+    res.json(resident)
+  }),
 }

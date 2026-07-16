@@ -73,6 +73,9 @@ model Resident {
   emergency2Relation String?
   emergency2Phone    String?
 
+  // Last time the resident opened the notices feed — anything newer is "unread".
+  noticesLastSeenAt DateTime?
+
   family             FamilyMember[]
   vehicles           Vehicle[]
   bookings           Booking[]

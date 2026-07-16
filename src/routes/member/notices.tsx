@@ -7,6 +7,8 @@ import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { getNotices } from '#/lib/api/notice'
+import { markNoticesSeen } from '#/lib/api/resident'
+import { useMyProfile } from '#/lib/store/member-profile'
 import { Megaphone, Search } from 'lucide-react'
 import type { Notice, NoticeCategory } from '#/lib/mock/types'
 
@@ -22,10 +24,16 @@ const tabTrigger =
   'min-h-11 shrink-0 px-3 data-[state=active]:bg-accent-gold/10 data-[state=active]:font-semibold data-[state=active]:text-accent-gold data-[state=active]:ring-1 data-[state=active]:ring-inset data-[state=active]:ring-accent-gold/30'
 
 function NoticesPage() {
+  const { profile, setProfile } = useMyProfile()
   const [notices, setNotices] = React.useState<Notice[]>([])
   const [status, setStatus] = React.useState<'loading' | 'ready' | 'error'>('loading')
   const [category, setCategory] = React.useState<(typeof categories)[number]>('All')
   const [query, setQuery] = React.useState('')
+
+  // Snapshot the last-seen time on entry so "New" badges stay visible for this visit,
+  // then stamp the feed as seen. `undefined` = not captured yet, `null` = never seen.
+  const [seenBaseline, setSeenBaseline] = React.useState<string | null | undefined>(undefined)
+  const marked = React.useRef(false)
 
   React.useEffect(() => {
     let active = true
@@ -43,6 +51,19 @@ function NoticesPage() {
       active = false
     }
   }, [])
+
+  React.useEffect(() => {
+    if (seenBaseline === undefined && profile) setSeenBaseline(profile.noticesLastSeenAt)
+  }, [profile, seenBaseline])
+
+  React.useEffect(() => {
+    if (status === 'ready' && seenBaseline !== undefined && !marked.current) {
+      marked.current = true
+      markNoticesSeen().then(setProfile).catch(() => {})
+    }
+  }, [status, seenBaseline, setProfile])
+
+  const isNew = (n: Notice) => seenBaseline !== undefined && (seenBaseline === null || n.postedAt > seenBaseline)
 
   const q = query.trim().toLowerCase()
   const visible = notices
@@ -93,7 +114,7 @@ function NoticesPage() {
       ) : (
         <div className="space-y-3">
           {visible.map((notice) => (
-            <NoticeCard key={notice.id} notice={notice} />
+            <NoticeCard key={notice.id} notice={notice} isNew={isNew(notice)} />
           ))}
         </div>
       )}
