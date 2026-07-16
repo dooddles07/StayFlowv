@@ -11,51 +11,80 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '#/components/ui/dialog'
-import { useMockStore, genId } from '#/lib/store/mock-store'
-import { CURRENT_RESIDENT_ID } from '#/lib/session'
+import { ApiError } from '#/lib/api/client'
+import { getMyGuests, registerGuest, type GuestView } from '#/lib/api/guest'
+import { useMyProfile } from '#/lib/store/member-profile'
 import { nextDays, toDateKey } from '#/lib/booking-slots'
-import type { Guest } from '#/lib/mock/types'
 
 export const Route = createFileRoute('/member/guests')({
   head: () => ({ meta: [{ title: 'Guests — StayFlow Member' }] }),
   component: GuestsPage,
 })
 
+const errText = (err: unknown) => (err instanceof ApiError ? err.message : 'Something went wrong. Try again.')
+
 function GuestsPage() {
-  const { state, dispatch } = useMockStore()
+  const { profile } = useMyProfile()
   const days = React.useMemo(() => nextDays(14), [])
 
+  const [guests, setGuests] = React.useState<GuestView[]>([])
+  const [status, setStatus] = React.useState<'loading' | 'ready' | 'error'>('loading')
   const [name, setName] = React.useState('')
   const [purpose, setPurpose] = React.useState('')
   const [vehiclePlate, setVehiclePlate] = React.useState('')
   const [arrivalDate, setArrivalDate] = React.useState(days[0]!)
   const [arrivalTime, setArrivalTime] = React.useState('2:00 PM')
-  const [newGuest, setNewGuest] = React.useState<Guest | null>(null)
+  const [newGuest, setNewGuest] = React.useState<GuestView | null>(null)
+  const [submitting, setSubmitting] = React.useState(false)
 
-  const myGuests = state.guests
-    .filter((g) => g.hostResidentId === CURRENT_RESIDENT_ID)
-    .sort((a, b) => b.arrivalDate.localeCompare(a.arrivalDate))
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!name.trim()) return
-    const guest: Guest = {
-      id: genId('gst'),
-      name: name.trim(),
-      hostResidentId: CURRENT_RESIDENT_ID,
-      purpose: purpose.trim() || 'Personal visit',
-      vehiclePlate: vehiclePlate.trim() || undefined,
-      arrivalDate: toDateKey(arrivalDate),
-      arrivalTime,
-      passNumber: `SF-GP-${Math.floor(10000 + Math.random() * 89999)}`,
-      status: 'pending',
+  const load = React.useCallback((residentId: string) => {
+    let active = true
+    setStatus('loading')
+    getMyGuests(residentId)
+      .then((data) => {
+        if (!active) return
+        setGuests(data)
+        setStatus('ready')
+      })
+      .catch(() => {
+        if (active) setStatus('error')
+      })
+    return () => {
+      active = false
     }
-    dispatch({ type: 'ADD_GUEST', payload: guest })
-    setNewGuest(guest)
-    setName('')
-    setPurpose('')
-    setVehiclePlate('')
-    toast.success('Guest registered', { description: `${guest.name} · Pass ${guest.passNumber}` })
+  }, [])
+
+  React.useEffect(() => {
+    if (profile) return load(profile.id)
+  }, [profile, load])
+
+  const myGuests = [...guests].sort((a, b) => b.arrivalDate.localeCompare(a.arrivalDate))
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!name.trim() || !profile || submitting) return
+    setSubmitting(true)
+    try {
+      // Full ISO — the API's date column rejects a bare "YYYY-MM-DD".
+      const arrivalDateIso = new Date(toDateKey(arrivalDate)).toISOString()
+      const guest = await registerGuest({
+        name: name.trim(),
+        purpose: purpose.trim() || 'Personal visit',
+        vehiclePlate: vehiclePlate.trim() || undefined,
+        arrivalDate: arrivalDateIso,
+        arrivalTime,
+      })
+      setGuests((prev) => [guest, ...prev])
+      setNewGuest(guest)
+      setName('')
+      setPurpose('')
+      setVehiclePlate('')
+      toast.success('Guest registered', { description: `${guest.name} · Pass ${guest.passNumber}` })
+    } catch (err) {
+      toast.error(errText(err))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -94,8 +123,9 @@ function GuestsPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="mb-1.5 text-xs text-muted-text">Arrival date</Label>
+              <Label htmlFor="arrival-date" className="mb-1.5 text-xs text-muted-text">Arrival date</Label>
               <select
+                id="arrival-date"
                 value={toDateKey(arrivalDate)}
                 onChange={(e) => setArrivalDate(days.find((d) => toDateKey(d) === e.target.value) ?? days[0]!)}
                 className="h-9 w-full rounded-md border border-border bg-canvas px-2 text-sm text-foreground"
@@ -119,28 +149,49 @@ function GuestsPage() {
               />
             </div>
           </div>
-          <Button type="submit" className="w-full bg-accent-indigo text-white hover:bg-accent-indigo-soft">
-            Generate Pass
+          <Button type="submit" disabled={submitting || !profile} className="w-full bg-accent-indigo text-white hover:bg-accent-indigo-soft">
+            {submitting ? 'Generating…' : 'Generate Pass'}
           </Button>
         </form>
 
         <div className="lg:col-span-2">
           <SectionHeader title="Your Guests" description="Passes registered for your unit" />
-          {myGuests.length === 0 ? (
+          {status === 'loading' ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-20 animate-pulse rounded-2xl border border-border bg-surface" />
+              ))}
+            </div>
+          ) : status === 'error' ? (
+            <div className="rounded-2xl border border-border bg-surface p-8 text-center">
+              <p className="text-sm text-muted-text">We couldn't load your guests right now.</p>
+              <Button
+                onClick={() => profile && load(profile.id)}
+                className="mt-4 bg-accent-indigo text-white hover:bg-accent-indigo-soft"
+              >
+                Retry
+              </Button>
+            </div>
+          ) : myGuests.length === 0 ? (
             <EmptyState icon={Users} title="No guests registered" description="Register a guest to generate their pass." />
           ) : (
             <div className="space-y-3">
               {myGuests.map((guest) => (
-                <div key={guest.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4">
+                <button
+                  key={guest.id}
+                  type="button"
+                  onClick={() => setNewGuest(guest)}
+                  className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4 text-left transition-colors hover:border-accent-indigo/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-indigo/50"
+                >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">{guest.name}</p>
                     <p className="truncate text-xs text-muted-text">
-                      {guest.purpose} · {guest.arrivalDate} at {guest.arrivalTime}
+                      {guest.purpose} · {guest.arrivalDate.slice(0, 10)} at {guest.arrivalTime}
                     </p>
                     <p className="mt-0.5 text-[11px] text-muted-text/70">Pass {guest.passNumber}</p>
                   </div>
                   <StatusPill status={guest.status} />
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -150,7 +201,7 @@ function GuestsPage() {
       <Dialog open={!!newGuest} onOpenChange={(open) => !open && setNewGuest(null)}>
         <DialogContent className="border-border bg-surface text-foreground">
           <DialogHeader>
-            <DialogTitle>Guest Pass Generated</DialogTitle>
+            <DialogTitle>Guest Pass</DialogTitle>
           </DialogHeader>
           {newGuest && (
             <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-canvas p-6 text-center">
@@ -164,7 +215,7 @@ function GuestsPage() {
                   Pass Number: <span className="font-medium text-accent-gold">{newGuest.passNumber}</span>
                 </p>
                 <p className="mt-1">
-                  {newGuest.arrivalDate} at {newGuest.arrivalTime}
+                  {newGuest.arrivalDate.slice(0, 10)} at {newGuest.arrivalTime}
                 </p>
               </div>
               <StatusPill status={newGuest.status} />

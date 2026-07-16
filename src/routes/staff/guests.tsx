@@ -9,7 +9,8 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '#/components/ui/dialog'
-import { useMockStore } from '#/lib/store/mock-store'
+import { ApiError } from '#/lib/api/client'
+import { checkInGuest, checkOutGuest, getAllGuests, setGuestStatus, type GuestView } from '#/lib/api/guest'
 import { toDateKey } from '#/lib/booking-slots'
 
 export const Route = createFileRoute('/staff/guests')({
@@ -17,38 +18,68 @@ export const Route = createFileRoute('/staff/guests')({
   component: StaffGuestsPage,
 })
 
+const errText = (err: unknown) => (err instanceof ApiError ? err.message : 'Something went wrong. Try again.')
+
 function StaffGuestsPage() {
-  const { state, dispatch } = useMockStore()
   const today = toDateKey(new Date())
+  const [guests, setGuests] = React.useState<GuestView[]>([])
+  const [status, setStatus] = React.useState<'loading' | 'ready' | 'error'>('loading')
   const [tab, setTab] = React.useState<'arriving' | 'history'>('arriving')
   const [scannerOpen, setScannerOpen] = React.useState(false)
   const [passInput, setPassInput] = React.useState('')
+  const [busyIds, setBusyIds] = React.useState<Set<string>>(new Set())
 
-  const arriving = state.guests
-    .filter((g) => g.arrivalDate === today && (g.status === 'pending' || g.status === 'approved' || g.status === 'checked-in'))
+  const load = React.useCallback(() => {
+    let active = true
+    setStatus('loading')
+    getAllGuests()
+      .then((data) => {
+        if (!active) return
+        setGuests(data)
+        setStatus('ready')
+      })
+      .catch(() => {
+        if (active) setStatus('error')
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  React.useEffect(() => load(), [load])
+
+  const arriving = guests
+    .filter((g) => g.arrivalDate.slice(0, 10) === today && (g.status === 'pending' || g.status === 'approved' || g.status === 'checked-in'))
     .sort((a, b) => a.arrivalTime.localeCompare(b.arrivalTime))
 
-  const history = state.guests
-    .filter((g) => g.status === 'checked-out' || g.arrivalDate < today)
+  const history = guests
+    .filter((g) => g.status === 'checked-out' || g.arrivalDate.slice(0, 10) < today)
     .sort((a, b) => b.arrivalDate.localeCompare(a.arrivalDate))
 
-  function checkIn(id: string) {
-    dispatch({ type: 'UPDATE_GUEST_STATUS', payload: { id, status: 'checked-in' } })
-    toast.success('Guest checked in')
+  async function withBusy(id: string, action: () => Promise<GuestView>, successMessage: string) {
+    if (busyIds.has(id)) return
+    setBusyIds((prev) => new Set(prev).add(id))
+    try {
+      const updated = await action()
+      setGuests((prev) => prev.map((g) => (g.id === id ? updated : g)))
+      toast.success(successMessage)
+    } catch (err) {
+      toast.error(errText(err))
+    } finally {
+      setBusyIds((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }
   }
 
-  function checkOut(id: string) {
-    dispatch({ type: 'UPDATE_GUEST_STATUS', payload: { id, status: 'checked-out' } })
-    toast.success('Guest checked out')
-  }
-
-  function approve(id: string) {
-    dispatch({ type: 'UPDATE_GUEST_STATUS', payload: { id, status: 'approved' } })
-    toast.success('Guest approved')
-  }
+  const approve = (id: string) => withBusy(id, () => setGuestStatus(id, 'approved'), 'Guest approved')
+  const checkIn = (id: string) => withBusy(id, () => checkInGuest(id), 'Guest checked in')
+  const checkOut = (id: string) => withBusy(id, () => checkOutGuest(id), 'Guest checked out')
 
   function handleScanLookup() {
-    const guest = state.guests.find((g) => g.passNumber.toLowerCase() === passInput.trim().toLowerCase())
+    const guest = guests.find((g) => g.passNumber.toLowerCase() === passInput.trim().toLowerCase())
     if (!guest) {
       toast.error('Pass number not found')
       return
@@ -83,36 +114,49 @@ function StaffGuestsPage() {
         </TabsList>
       </Tabs>
 
-      {tab === 'arriving' ? (
+      {status === 'loading' ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-20 animate-pulse rounded-2xl border border-border bg-surface" />
+          ))}
+        </div>
+      ) : status === 'error' ? (
+        <div className="rounded-2xl border border-border bg-surface p-8 text-center">
+          <p className="text-sm text-muted-text">We couldn't load guests right now.</p>
+          <Button onClick={load} className="mt-4 bg-accent-indigo text-white hover:bg-accent-indigo-soft">
+            Retry
+          </Button>
+        </div>
+      ) : tab === 'arriving' ? (
         arriving.length === 0 ? (
           <EmptyState icon={UserCheck} title="No guests arriving today" />
         ) : (
           <div className="space-y-3">
             {arriving.map((guest) => {
-              const host = state.residents.find((r) => r.id === guest.hostResidentId)
+              const busy = busyIds.has(guest.id)
               return (
                 <div key={guest.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4">
                   <div>
                     <p className="text-sm font-medium text-foreground">{guest.name}</p>
                     <p className="text-xs text-muted-text">
-                      Hosted by {host?.name} · {guest.arrivalTime} · Pass {guest.passNumber}
+                      Hosted by {guest.hostName ?? 'Resident'} · {guest.arrivalTime} · Pass {guest.passNumber}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <StatusPill status={guest.status} />
                     {guest.status === 'pending' && (
-                      <Button size="sm" variant="outline" className="border-border text-foreground hover:bg-surface-hover" onClick={() => approve(guest.id)}>
-                        Approve
+                      <Button size="sm" variant="outline" disabled={busy} className="border-border text-foreground hover:bg-surface-hover" onClick={() => approve(guest.id)}>
+                        {busy ? 'Approving…' : 'Approve'}
                       </Button>
                     )}
                     {guest.status === 'approved' && (
-                      <Button size="sm" className="gap-1.5 bg-accent-indigo text-white hover:bg-accent-indigo-soft" onClick={() => checkIn(guest.id)}>
-                        <CheckCircle2 className="size-3.5" /> Check In
+                      <Button size="sm" disabled={busy} className="gap-1.5 bg-accent-indigo text-white hover:bg-accent-indigo-soft" onClick={() => checkIn(guest.id)}>
+                        <CheckCircle2 className="size-3.5" /> {busy ? 'Checking in…' : 'Check In'}
                       </Button>
                     )}
                     {guest.status === 'checked-in' && (
-                      <Button size="sm" variant="outline" className="gap-1.5 border-border text-foreground hover:bg-surface-hover" onClick={() => checkOut(guest.id)}>
-                        <LogOut className="size-3.5" /> Check Out
+                      <Button size="sm" variant="outline" disabled={busy} className="gap-1.5 border-border text-foreground hover:bg-surface-hover" onClick={() => checkOut(guest.id)}>
+                        <LogOut className="size-3.5" /> {busy ? 'Checking out…' : 'Check Out'}
                       </Button>
                     )}
                   </div>
@@ -126,46 +170,40 @@ function StaffGuestsPage() {
       ) : (
         <>
           <div className="space-y-3 sm:hidden">
-            {history.map((guest) => {
-              const host = state.residents.find((r) => r.id === guest.hostResidentId)
-              return (
-                <div key={guest.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{guest.name}</p>
-                    <p className="text-xs text-muted-text">{guest.arrivalDate} · Hosted by {host?.name}</p>
-                  </div>
-                  <StatusPill status={guest.status} />
+            {history.map((guest) => (
+              <div key={guest.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{guest.name}</p>
+                  <p className="text-xs text-muted-text">{guest.arrivalDate.slice(0, 10)} · Hosted by {guest.hostName ?? 'Resident'}</p>
                 </div>
-              )
-            })}
+                <StatusPill status={guest.status} />
+              </div>
+            ))}
           </div>
-        <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
-          <table className="w-full min-w-[600px] text-left text-sm">
-            <thead className="bg-surface-hover text-xs uppercase tracking-wide text-muted-text">
-              <tr>
-                <th className="px-4 py-3 font-medium">Guest</th>
-                <th className="px-4 py-3 font-medium">Date</th>
-                <th className="px-4 py-3 font-medium">Host</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border bg-surface">
-              {history.map((guest) => {
-                const host = state.residents.find((r) => r.id === guest.hostResidentId)
-                return (
+          <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
+            <table className="w-full min-w-[600px] text-left text-sm">
+              <thead className="bg-surface-hover text-xs uppercase tracking-wide text-muted-text">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Guest</th>
+                  <th className="px-4 py-3 font-medium">Date</th>
+                  <th className="px-4 py-3 font-medium">Host</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border bg-surface">
+                {history.map((guest) => (
                   <tr key={guest.id}>
                     <td className="px-4 py-3 text-foreground">{guest.name}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-muted-text">{guest.arrivalDate}</td>
-                    <td className="px-4 py-3 text-muted-text">{host?.name}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-muted-text">{guest.arrivalDate.slice(0, 10)}</td>
+                    <td className="px-4 py-3 text-muted-text">{guest.hostName ?? 'Resident'}</td>
                     <td className="px-4 py-3">
                       <StatusPill status={guest.status} />
                     </td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
 
@@ -178,7 +216,7 @@ function StaffGuestsPage() {
             <span className="flex size-16 items-center justify-center rounded-full bg-accent-indigo/15 text-accent-gold">
               <QrCodeIcon className="size-7" />
             </span>
-            <p className="text-sm text-muted-text">Point the guest's QR pass at the scanner, or enter their pass number below.</p>
+            <p className="text-sm text-muted-text">Type the guest's pass number below to check them in.</p>
           </div>
           <div className="mt-2 flex gap-2">
             <Input
