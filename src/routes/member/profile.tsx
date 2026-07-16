@@ -1,9 +1,11 @@
 import { createFileRoute, useBlocker } from '@tanstack/react-router'
 import * as React from 'react'
 import { toast } from 'sonner'
-import { Car, Heart, Pencil, PhoneCall, Plus, Shield, SlidersHorizontal, Trash2, User as UserIcon, X } from 'lucide-react'
+import { Camera, Car, Heart, Pencil, PhoneCall, Plus, Shield, Shuffle, SlidersHorizontal, Trash2, User as UserIcon, X } from 'lucide-react'
 import { PageHeader } from '#/components/stayflow/page-header'
-import { AvatarInitials } from '#/components/stayflow/avatar-initials'
+import { UserAvatar } from '#/components/stayflow/user-avatar'
+import { DICEBEAR_STYLES, avatarUrl } from '#/lib/avatar'
+import { cn } from '#/lib/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -60,13 +62,23 @@ const isBlank = (s: string) => s.trim() === ''
 const phoneError = (v: string) => (isBlank(v) ? 'Phone is required' : !PHONE_RE.test(v) ? 'Enter a valid phone number' : '')
 
 function computeErrors(f: ResidentProfile) {
+  const c2 = f.emergencyContact2
+  const hasSecondary = !isBlank(c2.name) || !isBlank(c2.relation) || !isBlank(c2.phone)
   return {
     name: isBlank(f.name) ? 'Name is required' : '',
     phone: phoneError(f.phone),
     emName: isBlank(f.emergencyContact.name) ? 'Contact name is required' : '',
     emRelation: isBlank(f.emergencyContact.relation) ? 'Relation is required' : '',
     emPhone: phoneError(f.emergencyContact.phone),
+    // Secondary contact is optional, but if any field is filled the name + phone are required.
+    em2Name: hasSecondary && isBlank(c2.name) ? 'Contact name is required' : '',
+    em2Phone: hasSecondary ? phoneError(c2.phone) : '',
   }
+}
+
+const monthYear = (iso: string) => {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
 }
 
 function FieldError({ msg }: { msg?: string }) {
@@ -80,17 +92,109 @@ function FieldError({ msg }: { msg?: string }) {
 const tabTrigger =
   'min-h-11 shrink-0 gap-1.5 px-3 data-[state=active]:bg-accent-gold/10 data-[state=active]:font-semibold data-[state=active]:text-accent-gold data-[state=active]:ring-1 data-[state=active]:ring-inset data-[state=active]:ring-accent-gold/30'
 
-function toUpdate(f: ResidentProfile): ResidentProfileUpdate {
-  return {
-    name: f.name.trim(),
-    phone: f.phone.trim(),
-    emergencyName: f.emergencyContact.name.trim(),
-    emergencyRelation: f.emergencyContact.relation.trim(),
-    emergencyPhone: f.emergencyContact.phone.trim(),
-    notifications: f.preferences.notifications,
-    newsletter: f.preferences.newsletter,
-    dietary: f.preferences.dietary,
+// --- Avatar picker (DiceBear) ---
+function AvatarDialog({
+  seed,
+  style,
+  name,
+  onSaved,
+}: {
+  seed: string
+  style: string | null
+  name: string
+  onSaved: (p: ResidentProfile) => void
+}) {
+  const [open, setOpen] = React.useState(false)
+  const [draftStyle, setDraftStyle] = React.useState<string | null>(style)
+  const [draftSeed, setDraftSeed] = React.useState(seed)
+  const [busy, setBusy] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!open) return
+    setDraftStyle(style)
+    setDraftSeed(seed || name)
+  }, [open, seed, style, name])
+
+  async function submit() {
+    setBusy(true)
+    try {
+      const profile = await updateMyProfile({ avatarSeed: draftSeed, avatarStyle: draftStyle })
+      onSaved(profile)
+      toast.success('Avatar updated')
+      setOpen(false)
+    } catch (err) {
+      toast.error(errText(err))
+    } finally {
+      setBusy(false)
+    }
   }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1.5 border-border">
+          <Camera className="size-3.5" /> Change
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="border-border bg-surface">
+        <DialogHeader>
+          <DialogTitle>Choose your avatar</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-5">
+          <div className="flex items-center gap-4">
+            <UserAvatar seed={draftSeed} style={draftStyle} name={name} className="size-16" />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDraftSeed(Math.random().toString(36).slice(2, 10))}
+              className="gap-1.5 border-border"
+            >
+              <Shuffle className="size-3.5" /> Shuffle
+            </Button>
+          </div>
+          <div>
+            <Label className="mb-2 block text-xs text-muted-text">Style</Label>
+            <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+              <button
+                type="button"
+                onClick={() => setDraftStyle(null)}
+                aria-pressed={draftStyle === null}
+                className={cn(
+                  'flex aspect-square items-center justify-center rounded-xl border bg-canvas text-[10px] font-semibold',
+                  draftStyle === null ? 'border-accent-gold text-accent-gold' : 'border-border text-muted-text',
+                )}
+              >
+                ABC
+              </button>
+              {DICEBEAR_STYLES.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setDraftStyle(s)}
+                  aria-label={s}
+                  aria-pressed={draftStyle === s}
+                  className={cn(
+                    'aspect-square overflow-hidden rounded-xl border bg-canvas',
+                    draftStyle === s ? 'border-accent-gold ring-1 ring-accent-gold/40' : 'border-border',
+                  )}
+                >
+                  <img src={avatarUrl(s, draftSeed)} alt="" className="size-full" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline" className="border-border">Cancel</Button>
+          </DialogClose>
+          <Button onClick={submit} disabled={busy} className="bg-accent-indigo text-white hover:bg-accent-indigo-soft">
+            {busy ? 'Saving…' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 // --- Family add/edit dialog ---
@@ -409,7 +513,10 @@ function ProfilePage() {
           emergency:
             form.emergencyContact.name !== profile.emergencyContact.name ||
             form.emergencyContact.relation !== profile.emergencyContact.relation ||
-            form.emergencyContact.phone !== profile.emergencyContact.phone,
+            form.emergencyContact.phone !== profile.emergencyContact.phone ||
+            form.emergencyContact2.name !== profile.emergencyContact2.name ||
+            form.emergencyContact2.relation !== profile.emergencyContact2.relation ||
+            form.emergencyContact2.phone !== profile.emergencyContact2.phone,
           prefs:
             form.preferences.notifications !== profile.preferences.notifications ||
             form.preferences.newsletter !== profile.preferences.newsletter ||
@@ -426,15 +533,22 @@ function ProfilePage() {
     withResolver: true,
   })
 
-  async function save(message: string) {
+  // Each tab sends only the fields it owns and validates only its own keys, so saving
+  // one tab can never persist another tab's unsaved (or invalid) edits.
+  async function save(
+    patch: Partial<ResidentProfileUpdate>,
+    message: string,
+    keys: (keyof ReturnType<typeof computeErrors>)[],
+  ) {
     if (!form) return
-    if (Object.values(computeErrors(form)).some(Boolean)) {
+    const errs = computeErrors(form)
+    if (keys.some((k) => errs[k])) {
       toast.error('Fix the highlighted fields before saving.')
       return
     }
     setSaving(true)
     try {
-      const updated = await updateMyProfile(toUpdate(form))
+      const updated = await updateMyProfile(patch)
       setProfile(updated)
       setForm(updated)
       toast.success(message)
@@ -509,10 +623,24 @@ function ProfilePage() {
       </AlertDialog>
 
       <div className="mb-6 flex items-center gap-4 rounded-2xl border border-border bg-surface p-5">
-        <AvatarInitials seed={form.avatarSeed} className="size-14" />
-        <div>
+        <UserAvatar seed={form.avatarSeed} style={form.avatarStyle} name={form.name} className="size-14" />
+        <div className="min-w-0">
           <p className="text-base font-semibold text-foreground">{form.name}</p>
           <p className="text-sm text-muted-text">{form.unit} · {tierLabel(form.tier)} Member</p>
+          {monthYear(form.moveInDate) && (
+            <p className="text-xs text-muted-text">Member since {monthYear(form.moveInDate)}</p>
+          )}
+        </div>
+        <div className="ml-auto">
+          <AvatarDialog
+            seed={form.avatarSeed}
+            style={form.avatarStyle}
+            name={form.name}
+            onSaved={(p) => {
+              setProfile(p)
+              setForm((prev) => (prev ? { ...prev, avatarSeed: p.avatarSeed, avatarStyle: p.avatarStyle } : p))
+            }}
+          />
         </div>
       </div>
 
@@ -560,7 +688,7 @@ function ProfilePage() {
             </div>
           </div>
           <Button
-            onClick={() => save('Personal details saved')}
+            onClick={() => save({ name: form.name.trim(), phone: form.phone.trim() }, 'Personal details saved', ['name', 'phone'])}
             disabled={saving || !dirty.personal || !!errors.name || !!errors.phone}
             className="bg-accent-indigo text-white hover:bg-accent-indigo-soft"
           >
@@ -683,9 +811,70 @@ function ProfilePage() {
               <FieldError msg={errors.emPhone} />
             </div>
           </div>
+
+          <div className="border-t border-border pt-4">
+            <p className="mb-3 text-sm font-medium text-foreground">
+              Secondary contact <span className="font-normal text-muted-text">· optional</span>
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="emergency2-name" className="mb-1.5 text-xs text-muted-text">Contact name</Label>
+                <Input
+                  id="emergency2-name"
+                  value={form.emergencyContact2.name}
+                  aria-invalid={!!errors.em2Name}
+                  onChange={(e) => setForm({ ...form, emergencyContact2: { ...form.emergencyContact2, name: e.target.value } })}
+                  className="border-border bg-canvas"
+                />
+                <FieldError msg={errors.em2Name} />
+              </div>
+              <div>
+                <Label htmlFor="emergency2-relation" className="mb-1.5 text-xs text-muted-text">Relation</Label>
+                <Input
+                  id="emergency2-relation"
+                  value={form.emergencyContact2.relation}
+                  onChange={(e) => setForm({ ...form, emergencyContact2: { ...form.emergencyContact2, relation: e.target.value } })}
+                  className="border-border bg-canvas"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="emergency2-phone" className="mb-1.5 text-xs text-muted-text">Phone</Label>
+                <Input
+                  id="emergency2-phone"
+                  value={form.emergencyContact2.phone}
+                  aria-invalid={!!errors.em2Phone}
+                  onChange={(e) => setForm({ ...form, emergencyContact2: { ...form.emergencyContact2, phone: e.target.value } })}
+                  className="border-border bg-canvas"
+                />
+                <FieldError msg={errors.em2Phone} />
+              </div>
+            </div>
+          </div>
+
           <Button
-            onClick={() => save('Emergency contact saved')}
-            disabled={saving || !dirty.emergency || !!errors.emName || !!errors.emRelation || !!errors.emPhone}
+            onClick={() =>
+              save(
+                {
+                  emergencyName: form.emergencyContact.name.trim(),
+                  emergencyRelation: form.emergencyContact.relation.trim(),
+                  emergencyPhone: form.emergencyContact.phone.trim(),
+                  emergency2Name: form.emergencyContact2.name.trim(),
+                  emergency2Relation: form.emergencyContact2.relation.trim(),
+                  emergency2Phone: form.emergencyContact2.phone.trim(),
+                },
+                'Emergency contact saved',
+                ['emName', 'emRelation', 'emPhone', 'em2Name', 'em2Phone'],
+              )
+            }
+            disabled={
+              saving ||
+              !dirty.emergency ||
+              !!errors.emName ||
+              !!errors.emRelation ||
+              !!errors.emPhone ||
+              !!errors.em2Name ||
+              !!errors.em2Phone
+            }
             className="bg-accent-indigo text-white hover:bg-accent-indigo-soft"
           >
             {saving ? 'Saving…' : 'Save Changes'}
@@ -752,7 +941,17 @@ function ProfilePage() {
             </div>
           </div>
           <Button
-            onClick={() => save('Preferences saved')}
+            onClick={() =>
+              save(
+                {
+                  notifications: form.preferences.notifications,
+                  newsletter: form.preferences.newsletter,
+                  dietary: form.preferences.dietary,
+                },
+                'Preferences saved',
+                [],
+              )
+            }
             disabled={saving || !dirty.prefs}
             className="bg-accent-indigo text-white hover:bg-accent-indigo-soft"
           >

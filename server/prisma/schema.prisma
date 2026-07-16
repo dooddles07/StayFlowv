@@ -59,6 +59,7 @@ model Resident {
   unit              String
   tier              MembershipTier
   avatarSeed        String
+  avatarStyle       String?
   moveInDate        DateTime
   dietary           String[]
   notifications     Boolean        @default(true)
@@ -66,6 +67,11 @@ model Resident {
   emergencyName     String
   emergencyRelation String
   emergencyPhone    String
+
+  // Optional secondary emergency contact.
+  emergency2Name     String?
+  emergency2Relation String?
+  emergency2Phone    String?
 
   family             FamilyMember[]
   vehicles           Vehicle[]

@@ -26,6 +26,7 @@ interface ResidentApiResponse {
   unit: string
   tier: ResidentTier
   avatarSeed: string
+  avatarStyle: string | null
   moveInDate: string
   dietary: string[]
   notifications: boolean
@@ -33,6 +34,9 @@ interface ResidentApiResponse {
   emergencyName: string
   emergencyRelation: string
   emergencyPhone: string
+  emergency2Name: string | null
+  emergency2Relation: string | null
+  emergency2Phone: string | null
   family: ResidentFamilyMember[]
   vehicles: ResidentVehicle[]
 }
@@ -46,20 +50,28 @@ export interface ResidentProfile {
   unit: string
   tier: ResidentTier
   avatarSeed: string
+  avatarStyle: string | null
   moveInDate: string
   family: ResidentFamilyMember[]
   vehicles: ResidentVehicle[]
   emergencyContact: { name: string; relation: string; phone: string }
+  emergencyContact2: { name: string; relation: string; phone: string }
   preferences: { dietary: string[]; notifications: boolean; newsletter: boolean }
 }
 
-// Only the fields a member may persist. The server enforces this too.
+// Every field a member may persist. The server enforces this allowlist too.
+// All optional — each tab sends only the fields it owns, so tabs never overwrite each other.
 export interface ResidentProfileUpdate {
   name: string
   phone: string
+  avatarSeed: string
+  avatarStyle: string | null
   emergencyName: string
   emergencyRelation: string
   emergencyPhone: string
+  emergency2Name: string
+  emergency2Relation: string
+  emergency2Phone: string
   notifications: boolean
   newsletter: boolean
   dietary: string[]
@@ -73,10 +85,16 @@ const toProfile = (r: ResidentApiResponse): ResidentProfile => ({
   unit: r.unit,
   tier: r.tier,
   avatarSeed: r.avatarSeed,
+  avatarStyle: r.avatarStyle,
   moveInDate: r.moveInDate,
   family: r.family,
   vehicles: r.vehicles,
   emergencyContact: { name: r.emergencyName, relation: r.emergencyRelation, phone: r.emergencyPhone },
+  emergencyContact2: {
+    name: r.emergency2Name ?? '',
+    relation: r.emergency2Relation ?? '',
+    phone: r.emergency2Phone ?? '',
+  },
   preferences: { dietary: r.dietary, notifications: r.notifications, newsletter: r.newsletter },
 })
 
@@ -103,7 +121,8 @@ export interface VehicleInput {
 
 export const getMyProfile = () => api.get<ResidentApiResponse>('/residents/me').then(toProfile)
 
-export const updateMyProfile = (patch: ResidentProfileUpdate) =>
+// Partial: each caller sends only the fields it owns (tab isolation). Server whitelists.
+export const updateMyProfile = (patch: Partial<ResidentProfileUpdate>) =>
   api.put<ResidentApiResponse>('/residents/me', patch).then(toProfile)
 
 export const addFamilyMember = (data: FamilyMemberInput) =>

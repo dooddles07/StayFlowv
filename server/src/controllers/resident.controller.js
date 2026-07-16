@@ -17,6 +17,11 @@ const SELF_EDITABLE_FIELDS = [
   'emergencyName',
   'emergencyRelation',
   'emergencyPhone',
+  'emergency2Name',
+  'emergency2Relation',
+  'emergency2Phone',
+  'avatarSeed',
+  'avatarStyle',
 ]
 
 const requireLinkedResidentId = (req) => {
