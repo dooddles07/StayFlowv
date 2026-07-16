@@ -1,11 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
 import { toast } from 'sonner'
-import { Calendar } from 'lucide-react'
+import { Calendar, Search } from 'lucide-react'
 import { PageHeader } from '#/components/stayflow/page-header'
 import { EventCard } from '#/components/stayflow/event-card'
 import { EmptyState } from '#/components/stayflow/empty-state'
 import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { ApiError } from '#/lib/api/client'
 import { cancelEventRsvp, getEvents, rsvpToEvent, type CommunityEventView } from '#/lib/api/event'
@@ -30,6 +31,7 @@ function EventsPage() {
   const [events, setEvents] = React.useState<CommunityEventView[]>([])
   const [status, setStatus] = React.useState<'loading' | 'ready' | 'error'>('loading')
   const [category, setCategory] = React.useState<(typeof categories)[number]>('All')
+  const [query, setQuery] = React.useState('')
   const [busyIds, setBusyIds] = React.useState<Set<string>>(new Set())
 
   const load = React.useCallback(() => {
@@ -82,12 +84,27 @@ function EventsPage() {
     }
   }
 
+  const q = query.trim().toLowerCase()
   const upcoming = events.filter((e) => e.date >= today())
-  const visible = upcoming.filter((e) => category === 'All' || e.category === category).sort((a, b) => a.date.localeCompare(b.date))
+  const visible = upcoming
+    .filter((e) => category === 'All' || e.category === category)
+    .filter((e) => q === '' || e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q))
+    .sort((a, b) => a.date.localeCompare(b.date))
 
   return (
     <div className="mx-auto max-w-7xl">
       <PageHeader eyebrow="Community" title="Events" description="RSVP to upcoming gatherings, wellness sessions, and celebrations." />
+
+      <div className="relative mb-4">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-text" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search events…"
+          aria-label="Search events"
+          className="border-border bg-surface pl-9"
+        />
+      </div>
 
       <Tabs value={category} onValueChange={(v) => setCategory(v as typeof category)} className="mb-6">
         <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto bg-surface p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -113,7 +130,7 @@ function EventsPage() {
           </Button>
         </div>
       ) : visible.length === 0 ? (
-        <EmptyState icon={Calendar} title="No upcoming events in this category" />
+        <EmptyState icon={Calendar} title={q ? 'No events match your search' : 'No upcoming events in this category'} />
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((event) => {
