@@ -1,9 +1,13 @@
+import * as React from 'react'
 import { formatDistanceToNowStrict } from 'date-fns'
 import { Bell, CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, UtensilsCrossed, Users } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '#/components/ui/popover'
 import { ScrollArea } from '#/components/ui/scroll-area'
 import { Button } from '#/components/ui/button'
 import { useMockStore } from '#/lib/store/mock-store'
+import { useAuthStore } from '#/lib/store/auth-store'
+import { useCurrentPortal } from '#/lib/hooks/use-current-portal'
+import { getMyNotifications, markAllNotificationsRead, markNotificationRead, type AppNotification } from '#/lib/api/notification'
 import { cn } from '#/lib/utils'
 import type { NotificationKind } from '#/lib/mock/types'
 
@@ -16,10 +20,17 @@ const kindIcon: Record<NotificationKind, typeof Bell> = {
   system: ShieldCheck,
 }
 
-export function NotificationBell() {
-  const { state, dispatch } = useMockStore()
-  const unread = state.notifications.filter((n) => !n.read)
-  const sorted = [...state.notifications].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+function NotificationList({
+  items,
+  onMarkRead,
+  onMarkAllRead,
+}: {
+  items: { id: string; kind: NotificationKind; title: string; body: string; createdAt: string; read: boolean }[]
+  onMarkRead: (id: string) => void
+  onMarkAllRead: () => void
+}) {
+  const unread = items.filter((n) => !n.read)
+  const sorted = [...items].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
 
   return (
     <Popover>
@@ -31,7 +42,9 @@ export function NotificationBell() {
         >
           <Bell className="size-[18px]" />
           {unread.length > 0 && (
-            <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-accent-gold ring-2 ring-canvas" />
+            <span className="absolute -right-0.5 -top-0.5 flex min-w-[18px] items-center justify-center rounded-full bg-accent-gold px-1 text-[10px] font-semibold leading-[18px] text-canvas ring-2 ring-canvas">
+              {unread.length > 9 ? '9+' : unread.length}
+            </span>
           )}
         </button>
       </PopoverTrigger>
@@ -43,7 +56,7 @@ export function NotificationBell() {
               variant="ghost"
               size="sm"
               className="h-auto px-2 py-1 text-xs text-accent-indigo-soft hover:text-accent-gold"
-              onClick={() => dispatch({ type: 'MARK_ALL_NOTIFICATIONS_READ' })}
+              onClick={onMarkAllRead}
             >
               Mark all read
             </Button>
@@ -60,7 +73,7 @@ export function NotificationBell() {
                   <li key={n.id}>
                     <button
                       type="button"
-                      onClick={() => dispatch({ type: 'MARK_NOTIFICATION_READ', payload: { id: n.id } })}
+                      onClick={() => onMarkRead(n.id)}
                       className={cn(
                         'flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-hover',
                         !n.read && 'bg-accent-indigo/[0.06]',
@@ -94,4 +107,61 @@ export function NotificationBell() {
       </PopoverContent>
     </Popover>
   )
+}
+
+// Live for the member portal (has a real per-resident notification feed).
+// Staff/management still read the local mock store — no per-user backend scoping
+// exists for those roles yet; wiring them is a separate, later pass.
+function MemberNotificationBell({ residentId }: { residentId: string }) {
+  const [items, setItems] = React.useState<AppNotification[]>([])
+
+  const load = React.useCallback(() => {
+    let active = true
+    getMyNotifications(residentId)
+      .then((data) => active && setItems(data))
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [residentId])
+  React.useEffect(() => load(), [load])
+
+  async function handleMarkRead(id: string) {
+    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
+    try {
+      await markNotificationRead(id)
+    } catch {
+      load()
+    }
+  }
+
+  async function handleMarkAllRead() {
+    setItems((prev) => prev.map((n) => ({ ...n, read: true })))
+    try {
+      await markAllNotificationsRead(residentId)
+    } catch {
+      load()
+    }
+  }
+
+  return <NotificationList items={items} onMarkRead={handleMarkRead} onMarkAllRead={handleMarkAllRead} />
+}
+
+function MockNotificationBell() {
+  const { state, dispatch } = useMockStore()
+  return (
+    <NotificationList
+      items={state.notifications}
+      onMarkRead={(id) => dispatch({ type: 'MARK_NOTIFICATION_READ', payload: { id } })}
+      onMarkAllRead={() => dispatch({ type: 'MARK_ALL_NOTIFICATIONS_READ' })}
+    />
+  )
+}
+
+export function NotificationBell() {
+  const portal = useCurrentPortal()
+  const residentId = useAuthStore((s) => s.user?.resident?.id)
+
+  if (portal === 'member' && residentId) return <MemberNotificationBell residentId={residentId} />
+  return <MockNotificationBell />
 }

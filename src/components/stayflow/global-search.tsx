@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { CalendarDays, ClipboardList, Megaphone, UserCircle2, Users, UtensilsCrossed, Waves } from 'lucide-react'
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '#/components/ui/command'
@@ -11,18 +11,9 @@ import { getAllResidents, type ResidentProfile } from '#/lib/api/resident'
 import { getMyGuests, getAllGuests, type GuestView } from '#/lib/api/guest'
 import { getAllBookings, type BookingView } from '#/lib/api/booking'
 import { getNotices } from '#/lib/api/notice'
+import { useCurrentPortal } from '#/lib/hooks/use-current-portal'
 import type { Portal } from '#/lib/hooks/use-portal-preference'
 import type { Facility, Notice, Restaurant } from '#/lib/mock/types'
-
-// Every destination below stays inside the current portal — search must never
-// hand a member/staff/management user a link into a portal they can't access.
-function useCurrentPortal(): Portal | null {
-  const { pathname } = useLocation()
-  if (pathname.startsWith('/member')) return 'member'
-  if (pathname.startsWith('/staff')) return 'staff'
-  if (pathname.startsWith('/management')) return 'management'
-  return null
-}
 
 const facilitiesListPath: Record<Portal, string> = {
   member: '/member/facilities',

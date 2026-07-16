@@ -82,6 +82,7 @@ model Resident {
   diningReservations DiningReservation[]
   guests             Guest[]
   eventRsvps         EventRsvp[]
+  appNotifications   AppNotification[]
   user               User?
 
   @@map("residents")
@@ -267,13 +268,18 @@ model Notice {
 }
 
 model AppNotification {
-  id        String   @id @default(cuid())
-  kind      String
-  title     String
-  body      String
-  createdAt DateTime @default(now())
-  read      Boolean  @default(false)
+  id         String    @id @default(cuid())
+  kind       String
+  title      String
+  body       String
+  createdAt  DateTime  @default(now())
+  read       Boolean   @default(false)
+  // Nullable: rows with no owner predate per-user scoping and are visible to no one
+  // until backfilled, rather than leaking to every resident.
+  residentId String?
+  resident   Resident? @relation(fields: [residentId], references: [id], onDelete: Cascade)
 
+  @@index([residentId])
   @@map("notifications")
 }
 
