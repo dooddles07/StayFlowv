@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
 import { toast } from 'sonner'
+import { format, parseISO } from 'date-fns'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { PageHeader } from '#/components/stayflow/page-header'
 import { Button } from '#/components/ui/button'
@@ -30,6 +31,7 @@ export const Route = createFileRoute('/management/events')({
 const categories: EventCategory[] = ['Social', 'Wellness', 'Kids', 'Seasonal', 'Cultural']
 const errText = (err: unknown) => (err instanceof ApiError ? err.message : 'Something went wrong. Try again.')
 const DEFAULT_EVENT_IMAGE = '/images/events/wine-tasting.webp'
+const eventDate = (iso: string) => format(parseISO(iso), 'MMM d, yyyy')
 
 interface EventDraft {
   id?: string
@@ -176,7 +178,7 @@ function ManagementEventsPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-medium text-foreground">{event.title}</p>
-                    <p className="text-xs text-muted-text">{event.category} · {event.date} · {event.time}</p>
+                    <p className="text-xs text-muted-text">{event.category} · {eventDate(event.date)} · {event.time}</p>
                   </div>
                   <span className="shrink-0 text-xs text-muted-text">{event.attendeeIds.length}/{event.capacity}</span>
                 </div>
@@ -220,7 +222,7 @@ function ManagementEventsPage() {
                   <tr key={event.id}>
                     <td className="px-4 py-3 font-medium text-foreground">{event.title}</td>
                     <td className="px-4 py-3 text-muted-text">{event.category}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-muted-text">{event.date} · {event.time}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-muted-text">{eventDate(event.date)} · {event.time}</td>
                     <td className="px-4 py-3 text-muted-text">{event.attendeeIds.length} / {event.capacity}</td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1.5">
