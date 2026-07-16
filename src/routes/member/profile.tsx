@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { Camera, Car, Heart, Pencil, PhoneCall, Plus, Shield, Shuffle, SlidersHorizontal, Trash2, User as UserIcon, X } from 'lucide-react'
 import { PageHeader } from '#/components/stayflow/page-header'
 import { UserAvatar } from '#/components/stayflow/user-avatar'
+import { PasswordInput } from '#/components/stayflow/password-input'
 import { DICEBEAR_STYLES, avatarUrl } from '#/lib/avatar'
 import { cn } from '#/lib/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
@@ -355,7 +356,7 @@ function DeleteButton({ label, onConfirm }: { label: string; onConfirm: () => Pr
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="size-8 text-muted-text hover:text-red-500" aria-label={`Remove ${label}`}>
+        <Button variant="ghost" size="icon" className="size-11 text-muted-text hover:text-red-500" aria-label={`Remove ${label}`}>
           <Trash2 className="size-4" />
         </Button>
       </AlertDialogTrigger>
@@ -428,7 +429,7 @@ function EmailSection() {
         </div>
         <div>
           <Label htmlFor="email-password" className="mb-1.5 text-xs text-muted-text">Current password</Label>
-          <Input id="email-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="border-border bg-canvas" />
+          <PasswordInput id="email-password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="border-border bg-canvas" />
         </div>
       </div>
       <p className="text-xs text-muted-text">We'll send a verification link to the new address. Your email changes only after you open it.</p>
@@ -473,16 +474,16 @@ function SecuritySection() {
       <div className="max-w-md space-y-4">
         <div>
           <Label htmlFor="pw-current" className="mb-1.5 text-xs text-muted-text">Current password</Label>
-          <Input id="pw-current" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className="border-border bg-canvas" />
+          <PasswordInput id="pw-current" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className="border-border bg-canvas" />
         </div>
         <div>
           <Label htmlFor="pw-new" className="mb-1.5 text-xs text-muted-text">New password</Label>
-          <Input id="pw-new" type="password" autoComplete="new-password" value={next} aria-invalid={!!nextError || !!sameError} onChange={(e) => setNext(e.target.value)} className="border-border bg-canvas" />
+          <PasswordInput id="pw-new" autoComplete="new-password" value={next} aria-invalid={!!nextError || !!sameError} onChange={(e) => setNext(e.target.value)} className="border-border bg-canvas" />
           <FieldError msg={nextError || sameError} />
         </div>
         <div>
           <Label htmlFor="pw-confirm" className="mb-1.5 text-xs text-muted-text">Confirm new password</Label>
-          <Input id="pw-confirm" type="password" autoComplete="new-password" value={confirm} aria-invalid={!!confirmError} onChange={(e) => setConfirm(e.target.value)} className="border-border bg-canvas" />
+          <PasswordInput id="pw-confirm" autoComplete="new-password" value={confirm} aria-invalid={!!confirmError} onChange={(e) => setConfirm(e.target.value)} className="border-border bg-canvas" />
           <FieldError msg={confirmError} />
         </div>
       </div>
@@ -544,6 +545,7 @@ function ProfilePage() {
     const errs = computeErrors(form)
     if (keys.some((k) => errs[k])) {
       toast.error('Fix the highlighted fields before saving.')
+      document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
       return
     }
     setSaving(true)
@@ -722,7 +724,7 @@ function ProfilePage() {
                     initial={member}
                     onSaved={setProfile}
                     trigger={
-                      <Button variant="ghost" size="icon" className="size-8 text-muted-text hover:text-foreground" aria-label={`Edit ${member.name}`}>
+                      <Button variant="ghost" size="icon" className="size-11 text-muted-text hover:text-foreground" aria-label={`Edit ${member.name}`}>
                         <Pencil className="size-4" />
                       </Button>
                     }
@@ -763,7 +765,7 @@ function ProfilePage() {
                     initial={vehicle}
                     onSaved={setProfile}
                     trigger={
-                      <Button variant="ghost" size="icon" className="size-8 text-muted-text hover:text-foreground" aria-label={`Edit ${vehicle.make} ${vehicle.model}`}>
+                      <Button variant="ghost" size="icon" className="size-11 text-muted-text hover:text-foreground" aria-label={`Edit ${vehicle.make} ${vehicle.model}`}>
                         <Pencil className="size-4" />
                       </Button>
                     }
@@ -907,15 +909,15 @@ function ProfilePage() {
             {form.preferences.dietary.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-2">
                 {form.preferences.dietary.map((tag) => (
-                  <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-accent-indigo/15 px-3 py-1 text-xs font-medium text-foreground">
+                  <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-accent-indigo/15 py-1 pl-3 pr-1.5 text-xs font-medium text-foreground">
                     {tag}
                     <button
                       type="button"
                       onClick={() => removeDietary(tag)}
                       aria-label={`Remove ${tag}`}
-                      className="text-muted-text transition-colors hover:text-red-500"
+                      className="-m-1.5 flex size-7 items-center justify-center rounded-full text-muted-text transition-colors hover:text-red-500"
                     >
-                      <X className="size-3" />
+                      <X className="size-3.5" />
                     </button>
                   </span>
                 ))}

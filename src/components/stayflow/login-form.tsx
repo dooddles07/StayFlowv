@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
+import { PasswordInput } from '#/components/stayflow/password-input'
 import { setStoredPortal, type Portal } from '#/lib/hooks/use-portal-preference'
 import { ApiError, isPortalRoleMatch, useAuthStore } from '#/lib/store/auth-store'
 import { cn } from '#/lib/utils'
@@ -75,9 +76,8 @@ export function LoginForm({ portal, portalLabel, className, submitClassName }: L
             Forgot password?
           </Link>
         </div>
-        <Input
+        <PasswordInput
           id={`${portal}-password`}
-          type="password"
           autoComplete="current-password"
           placeholder="••••••••"
           value={password}

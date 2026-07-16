@@ -25,7 +25,7 @@ import {
 import { ApiError } from '#/lib/api/client'
 import { cancelGuest, getMyGuests, registerGuest, updateGuestDetails, type GuestView } from '#/lib/api/guest'
 import { useMyProfile } from '#/lib/store/member-profile'
-import { nextDays, toDateKey } from '#/lib/booking-slots'
+import { nextDays, toDateKey, TIME_OF_DAY_OPTIONS } from '#/lib/booking-slots'
 
 export const Route = createFileRoute('/member/guests')({
   head: () => ({ meta: [{ title: 'Guests — StayFlow Member' }] }),
@@ -212,12 +212,18 @@ function GuestsPage() {
               <Label htmlFor="arrival-time" className="mb-1.5 text-xs text-muted-text">
                 Arrival time
               </Label>
-              <Input
+              <select
                 id="arrival-time"
                 value={arrivalTime}
                 onChange={(e) => setArrivalTime(e.target.value)}
-                className="border-border bg-canvas"
-              />
+                className="h-9 w-full rounded-md border border-border bg-canvas px-2 text-sm text-foreground"
+              >
+                {TIME_OF_DAY_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <Button type="submit" disabled={submitting || !profile} className="w-full bg-accent-indigo text-white hover:bg-accent-indigo-soft">
@@ -305,7 +311,18 @@ function GuestsPage() {
                 </div>
                 <div>
                   <Label htmlFor="edit-time" className="mb-1.5 text-xs text-muted-text">Arrival time</Label>
-                  <Input id="edit-time" value={editTime} onChange={(e) => setEditTime(e.target.value)} className="border-border bg-canvas" />
+                  <select
+                    id="edit-time"
+                    value={editTime}
+                    onChange={(e) => setEditTime(e.target.value)}
+                    className="h-9 w-full rounded-md border border-border bg-canvas px-2 text-sm text-foreground"
+                  >
+                    {TIME_OF_DAY_OPTIONS.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="flex gap-2">

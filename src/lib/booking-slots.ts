@@ -8,6 +8,20 @@ export const FACILITY_TIME_SLOTS = [
   '7:00 PM – 8:30 PM',
 ]
 
+// Half-hour marks, 6:00 AM – 11:30 PM — for arrival-time pickers (guests, etc.)
+// where a single point in time is needed rather than a facility booking slot.
+export const TIME_OF_DAY_OPTIONS: string[] = (() => {
+  const options: string[] = []
+  for (let hour = 6; hour <= 23; hour++) {
+    for (const minute of ['00', '30']) {
+      const period = hour >= 12 ? 'PM' : 'AM'
+      const hour12 = hour % 12 === 0 ? 12 : hour % 12
+      options.push(`${hour12}:${minute} ${period}`)
+    }
+  }
+  return options
+})()
+
 export function nextDays(count: number): Date[] {
   const today = new Date()
   today.setHours(0, 0, 0, 0)

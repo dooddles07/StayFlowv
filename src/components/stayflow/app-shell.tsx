@@ -22,6 +22,12 @@ export function AppShell({ portal, identityName, identitySubtitle, identityLoadi
 
   return (
     <div className="flex min-h-dvh bg-canvas">
+      <a
+        href="#main-content"
+        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-50 focus-visible:rounded-lg focus-visible:bg-accent-indigo focus-visible:px-4 focus-visible:py-2 focus-visible:text-sm focus-visible:font-medium focus-visible:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-gold"
+      >
+        Skip to main content
+      </a>
       <Sidebar
         portal={portal}
         identityName={identityName}
@@ -59,7 +65,7 @@ export function AppShell({ portal, identityName, identitySubtitle, identityLoadi
           avatarStyle={avatarStyle}
           onOpenMobileNav={() => setMobileNavOpen(true)}
         />
-        <main className="min-w-0 flex-1 px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-10">{children}</main>
+        <main id="main-content" className="min-w-0 flex-1 px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-10">{children}</main>
       </div>
 
       <MobileBottomNav portal={portal} navBadges={navBadges} />
