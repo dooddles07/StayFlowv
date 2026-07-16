@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import { CalendarPlus, CloudSun, Sunset, UserPlus, UtensilsCrossed, Waves } from 'lucide-react'
 import { SectionHeader } from '#/components/stayflow/section-header'
@@ -193,7 +193,12 @@ function MemberDashboard() {
               </div>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-border bg-canvas/40 px-4 py-3">
+            <CloudSun className="size-5 text-muted-text" />
+            <p className="text-xs text-muted-text">Weather unavailable</p>
+          </div>
+        )}
       </div>
 
       <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -210,7 +215,19 @@ function MemberDashboard() {
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <SectionHeader title="Upcoming Reservations" />
+          <SectionHeader
+            title="Upcoming Reservations"
+            action={
+              <div className="flex shrink-0 items-center gap-3 text-xs font-medium">
+                <Link to="/member/facilities" className="text-accent-indigo-soft transition-colors hover:text-accent-gold">
+                  Facilities
+                </Link>
+                <Link to="/member/dining" className="text-accent-indigo-soft transition-colors hover:text-accent-gold">
+                  Dining
+                </Link>
+              </div>
+            }
+          />
           {upcomingStatus === 'loading' ? (
             <div className="space-y-3">
               {Array.from({ length: 2 }).map((_, i) => (
