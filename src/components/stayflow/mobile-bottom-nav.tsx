@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '#/components/ui/sh
 
 const MAX_VISIBLE = 4
 
-export function MobileBottomNav({ portal }: { portal: Portal }) {
+export function MobileBottomNav({ portal, navBadges }: { portal: Portal; navBadges?: Partial<Record<string, boolean>> }) {
   const location = useLocation()
   const [moreOpen, setMoreOpen] = React.useState(false)
   const items = navConfig[portal]
@@ -31,12 +31,13 @@ export function MobileBottomNav({ portal }: { portal: Portal }) {
               key={item.to}
               to={item.to}
               className={cn(
-                'flex flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-medium',
+                'relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-medium',
                 active ? 'text-accent-gold' : 'text-muted-text',
               )}
             >
               <Icon className="size-[19px]" />
               {item.label}
+              {navBadges?.[item.to] && <span className="absolute right-[28%] top-1.5 size-1.5 rounded-full bg-accent-gold" />}
             </Link>
           )
         })}
@@ -45,12 +46,15 @@ export function MobileBottomNav({ portal }: { portal: Portal }) {
             type="button"
             onClick={() => setMoreOpen(true)}
             className={cn(
-              'flex flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-medium',
+              'relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-medium',
               overflow.some((i) => isActive(i.to)) ? 'text-accent-gold' : 'text-muted-text',
             )}
           >
             <MoreHorizontal className="size-[19px]" />
             More
+            {overflow.some((i) => navBadges?.[i.to]) && (
+              <span className="absolute right-[28%] top-1.5 size-1.5 rounded-full bg-accent-gold" />
+            )}
           </button>
         )}
       </nav>
@@ -70,12 +74,13 @@ export function MobileBottomNav({ portal }: { portal: Portal }) {
                   to={item.to}
                   onClick={() => setMoreOpen(false)}
                   className={cn(
-                    'flex flex-col items-center gap-2 rounded-xl border border-border px-3 py-4 text-xs font-medium',
+                    'relative flex flex-col items-center gap-2 rounded-xl border border-border px-3 py-4 text-xs font-medium',
                     active ? 'border-accent-gold/50 bg-accent-indigo/10 text-accent-gold' : 'text-muted-text hover:text-foreground',
                   )}
                 >
                   <Icon className="size-5" />
                   {item.label}
+                  {navBadges?.[item.to] && <span className="absolute right-3 top-3 size-1.5 rounded-full bg-accent-gold" />}
                 </Link>
               )
             })}

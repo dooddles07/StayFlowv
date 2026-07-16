@@ -1,7 +1,9 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
+import * as React from 'react'
 import { AppShell } from '#/components/stayflow/app-shell'
 import { useRequireAuth } from '#/lib/hooks/use-require-auth'
 import { MemberProfileProvider, useMyProfile } from '#/lib/store/member-profile'
+import { getNotices } from '#/lib/api/notice'
 
 export const Route = createFileRoute('/member')({
   component: MemberLayout,
@@ -9,6 +11,22 @@ export const Route = createFileRoute('/member')({
 
 function MemberShell() {
   const { profile, status } = useMyProfile()
+  const [hasUnreadNotices, setHasUnreadNotices] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!profile) return
+    let active = true
+    getNotices()
+      .then((notices) => {
+        if (!active) return
+        const seen = profile.noticesLastSeenAt
+        setHasUnreadNotices(notices.some((n) => seen === null || n.postedAt > seen))
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [profile])
 
   return (
     <AppShell
@@ -18,6 +36,7 @@ function MemberShell() {
       identityLoading={status === 'loading'}
       avatarSeed={profile?.avatarSeed}
       avatarStyle={profile?.avatarStyle}
+      navBadges={{ '/member/notices': hasUnreadNotices }}
     >
       <Outlet />
     </AppShell>

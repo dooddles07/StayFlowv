@@ -13,11 +13,12 @@ interface SidebarProps {
   identityLoading?: boolean
   avatarSeed?: string
   avatarStyle?: string | null
+  navBadges?: Partial<Record<string, boolean>>
   onNavigate?: () => void
   className?: string
 }
 
-export function Sidebar({ portal, identityName, identitySubtitle, identityLoading, avatarSeed, avatarStyle, onNavigate, className }: SidebarProps) {
+export function Sidebar({ portal, identityName, identitySubtitle, identityLoading, avatarSeed, avatarStyle, navBadges, onNavigate, className }: SidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const logout = useAuthStore((s) => s.logout)
@@ -54,6 +55,7 @@ export function Sidebar({ portal, identityName, identitySubtitle, identityLoadin
             >
               <Icon className={cn('size-[18px]', isActive ? 'text-accent-gold' : 'text-muted-text group-hover:text-foreground')} />
               {item.label}
+              {navBadges?.[item.to] && <span className="ml-auto size-1.5 shrink-0 rounded-full bg-accent-gold" />}
             </Link>
           )
         })}
