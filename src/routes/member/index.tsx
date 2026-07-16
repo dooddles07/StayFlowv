@@ -7,11 +7,13 @@ import { FacilityCard } from '#/components/stayflow/facility-card'
 import { NoticeCard } from '#/components/stayflow/notice-card'
 import { QuickActionCard } from '#/components/stayflow/quick-action-card'
 import { EmptyState } from '#/components/stayflow/empty-state'
-import { useMockStore } from '#/lib/store/mock-store'
 import { getNotices } from '#/lib/api/notice'
+import { getFacilities } from '#/lib/api/facility'
+import { getMyBookings, type BookingView } from '#/lib/api/booking'
+import { useMyProfile } from '#/lib/store/member-profile'
 import { CURRENT_RESIDENT_ID } from '#/lib/session'
 import { getResidentById } from '#/lib/mock/residents'
-import type { Notice } from '#/lib/mock/types'
+import type { Facility, Notice } from '#/lib/mock/types'
 
 export const Route = createFileRoute('/member/')({
   head: () => ({ meta: [{ title: 'Dashboard — StayFlow Member' }] }),
@@ -19,16 +21,38 @@ export const Route = createFileRoute('/member/')({
 })
 
 function MemberDashboard() {
-  const { state } = useMockStore()
+  const { profile } = useMyProfile()
   const resident = getResidentById(CURRENT_RESIDENT_ID)
   const firstName = resident?.name.split(' ')[0] ?? 'Resident'
 
-  const upcomingBookings = state.bookings
-    .filter((b) => b.residentId === CURRENT_RESIDENT_ID && b.status !== 'cancelled')
+  const [facilities, setFacilities] = React.useState<Facility[]>([])
+  const [bookings, setBookings] = React.useState<BookingView[]>([])
+  React.useEffect(() => {
+    let active = true
+    getFacilities()
+      .then((data) => active && setFacilities(data))
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
+  React.useEffect(() => {
+    if (!profile) return
+    let active = true
+    getMyBookings(profile.id)
+      .then((data) => active && setBookings(data))
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [profile])
+
+  const upcomingBookings = bookings
+    .filter((b) => b.status !== 'cancelled')
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 4)
 
-  const featuredFacilities = state.facilities.filter((f) => f.status === 'open').slice(0, 3)
+  const featuredFacilities = facilities.filter((f) => f.status === 'open').slice(0, 3)
 
   const [notices, setNotices] = React.useState<Notice[]>([])
   React.useEffect(() => {
@@ -86,19 +110,16 @@ function MemberDashboard() {
             <EmptyState icon={Waves} title="No upcoming reservations" description="Book a facility to see it here." />
           ) : (
             <div className="space-y-3">
-              {upcomingBookings.map((booking) => {
-                const facility = state.facilities.find((f) => f.id === booking.facilityId)
-                return (
-                  <ReservationRow
-                    key={booking.id}
-                    date={booking.date}
-                    title={facility?.name ?? 'Facility'}
-                    subtitle={booking.timeSlot}
-                    status={booking.status}
-                    meta={`Party of ${booking.partySize}`}
-                  />
-                )
-              })}
+              {upcomingBookings.map((booking) => (
+                <ReservationRow
+                  key={booking.id}
+                  date={booking.date}
+                  title={booking.facilityName ?? 'Facility'}
+                  subtitle={booking.timeSlot}
+                  status={booking.status}
+                  meta={`Party of ${booking.partySize}`}
+                />
+              ))}
             </div>
           )}
 
