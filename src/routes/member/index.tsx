@@ -7,6 +7,7 @@ import { FacilityCard } from '#/components/stayflow/facility-card'
 import { NoticeCard } from '#/components/stayflow/notice-card'
 import { QuickActionCard } from '#/components/stayflow/quick-action-card'
 import { EmptyState } from '#/components/stayflow/empty-state'
+import { Button } from '#/components/ui/button'
 import { getNotices } from '#/lib/api/notice'
 import { getFacilities } from '#/lib/api/facility'
 import { getMyBookings, type BookingView } from '#/lib/api/booking'
@@ -21,23 +22,33 @@ export const Route = createFileRoute('/member/')({
   component: MemberDashboard,
 })
 
+type LoadStatus = 'loading' | 'ready' | 'error'
+
 function MemberDashboard() {
   const { profile } = useMyProfile()
   const firstName = profile?.name.split(' ')[0] ?? 'Resident'
 
   const [facilities, setFacilities] = React.useState<Facility[]>([])
-  const [bookings, setBookings] = React.useState<BookingView[]>([])
-  const [reservations, setReservations] = React.useState<ReservationView[]>([])
-  const [restaurantCount, setRestaurantCount] = React.useState<number | null>(null)
-  React.useEffect(() => {
+  const [facilitiesStatus, setFacilitiesStatus] = React.useState<LoadStatus>('loading')
+  const loadFacilities = React.useCallback(() => {
     let active = true
+    setFacilitiesStatus('loading')
     getFacilities()
-      .then((data) => active && setFacilities(data))
-      .catch(() => {})
+      .then((data) => {
+        if (!active) return
+        setFacilities(data)
+        setFacilitiesStatus('ready')
+      })
+      .catch(() => {
+        if (active) setFacilitiesStatus('error')
+      })
     return () => {
       active = false
     }
   }, [])
+  React.useEffect(() => loadFacilities(), [loadFacilities])
+
+  const [restaurantCount, setRestaurantCount] = React.useState<number | null>(null)
   React.useEffect(() => {
     let active = true
     getRestaurants()
@@ -47,20 +58,29 @@ function MemberDashboard() {
       active = false
     }
   }, [])
-  React.useEffect(() => {
-    if (!profile) return
+
+  const [bookings, setBookings] = React.useState<BookingView[]>([])
+  const [reservations, setReservations] = React.useState<ReservationView[]>([])
+  const [upcomingStatus, setUpcomingStatus] = React.useState<LoadStatus>('loading')
+  const loadUpcoming = React.useCallback((residentId?: string) => {
+    if (!residentId) return
     let active = true
-    Promise.all([getMyBookings(profile.id), getMyReservations(profile.id)])
+    setUpcomingStatus('loading')
+    Promise.all([getMyBookings(residentId), getMyReservations(residentId)])
       .then(([b, r]) => {
         if (!active) return
         setBookings(b)
         setReservations(r)
+        setUpcomingStatus('ready')
       })
-      .catch(() => {})
+      .catch(() => {
+        if (active) setUpcomingStatus('error')
+      })
     return () => {
       active = false
     }
-  }, [profile])
+  }, [])
+  React.useEffect(() => loadUpcoming(profile?.id), [profile, loadUpcoming])
 
   const upcoming = [
     ...bookings
@@ -90,15 +110,24 @@ function MemberDashboard() {
   const featuredFacilities = facilities.filter((f) => f.status === 'open').slice(0, 3)
 
   const [notices, setNotices] = React.useState<Notice[]>([])
-  React.useEffect(() => {
+  const [noticesStatus, setNoticesStatus] = React.useState<LoadStatus>('loading')
+  const loadNotices = React.useCallback(() => {
     let active = true
+    setNoticesStatus('loading')
     getNotices()
-      .then((data) => active && setNotices(data))
-      .catch(() => {})
+      .then((data) => {
+        if (!active) return
+        setNotices(data)
+        setNoticesStatus('ready')
+      })
+      .catch(() => {
+        if (active) setNoticesStatus('error')
+      })
     return () => {
       active = false
     }
   }, [])
+  React.useEffect(() => loadNotices(), [loadNotices])
   const topNotices = [...notices]
     .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.postedAt.localeCompare(a.postedAt))
     .slice(0, 3)
@@ -146,7 +175,20 @@ function MemberDashboard() {
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <SectionHeader title="Upcoming Reservations" />
-          {upcoming.length === 0 ? (
+          {upcomingStatus === 'loading' ? (
+            <div className="space-y-3">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="h-16 animate-pulse rounded-2xl border border-border bg-surface" />
+              ))}
+            </div>
+          ) : upcomingStatus === 'error' ? (
+            <div className="rounded-2xl border border-border bg-surface p-8 text-center">
+              <p className="text-sm text-muted-text">We couldn't load your reservations right now.</p>
+              <Button onClick={() => loadUpcoming(profile?.id)} className="mt-4 bg-accent-indigo text-white hover:bg-accent-indigo-soft">
+                Retry
+              </Button>
+            </div>
+          ) : upcoming.length === 0 ? (
             <EmptyState icon={Waves} title="No upcoming reservations" description="Book a facility or reserve dining to see it here." />
           ) : (
             <div className="space-y-3">
@@ -165,21 +207,51 @@ function MemberDashboard() {
 
           <div className="mt-8">
             <SectionHeader title="Featured Facilities" viewAllHref="/member/facilities" />
-            <div className="grid gap-4 sm:grid-cols-3">
-              {featuredFacilities.map((facility) => (
-                <FacilityCard key={facility.id} facility={facility} />
-              ))}
-            </div>
+            {facilitiesStatus === 'loading' ? (
+              <div className="grid gap-4 sm:grid-cols-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-40 animate-pulse rounded-2xl border border-border bg-surface" />
+                ))}
+              </div>
+            ) : facilitiesStatus === 'error' ? (
+              <div className="rounded-2xl border border-border bg-surface p-8 text-center">
+                <p className="text-sm text-muted-text">We couldn't load facilities right now.</p>
+                <Button onClick={loadFacilities} className="mt-4 bg-accent-indigo text-white hover:bg-accent-indigo-soft">
+                  Retry
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-3">
+                {featuredFacilities.map((facility) => (
+                  <FacilityCard key={facility.id} facility={facility} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
         <div>
           <SectionHeader title="Community Notices" viewAllHref="/member/notices" />
-          <div className="space-y-3">
-            {topNotices.map((notice) => (
-              <NoticeCard key={notice.id} notice={notice} />
-            ))}
-          </div>
+          {noticesStatus === 'loading' ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-20 animate-pulse rounded-2xl border border-border bg-surface" />
+              ))}
+            </div>
+          ) : noticesStatus === 'error' ? (
+            <div className="rounded-2xl border border-border bg-surface p-8 text-center">
+              <p className="text-sm text-muted-text">We couldn't load notices right now.</p>
+              <Button onClick={loadNotices} className="mt-4 bg-accent-indigo text-white hover:bg-accent-indigo-soft">
+                Retry
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {topNotices.map((notice) => (
+                <NoticeCard key={notice.id} notice={notice} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
