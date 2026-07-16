@@ -10,6 +10,8 @@ export const BookingModel = {
       where: { facilityId, status: { not: 'CANCELLED' } },
       select: { date: true, timeSlot: true, status: true },
     }),
+  findSlotConflict: (facilityId, date, timeSlot) =>
+    prisma.booking.findFirst({ where: { facilityId, date, timeSlot, status: { not: 'CANCELLED' } } }),
   create: (data) => prisma.booking.create({ data, include: { facility: true, resident: true } }),
   update: (id, data) => prisma.booking.update({ where: { id }, data, include: { facility: true, resident: true } }),
   remove: (id) => prisma.booking.delete({ where: { id } }),

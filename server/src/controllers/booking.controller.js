@@ -1,6 +1,7 @@
 import { BookingModel } from '../models/booking.model.js'
 import { buildCrudController } from '../utils/crudController.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
+import { ApiError } from '../utils/ApiError.js'
 
 const base = buildCrudController(BookingModel, 'Booking')
 
@@ -12,7 +13,10 @@ const toFullDate = (value) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$
 export const bookingController = {
   ...base,
   create: asyncHandler(async (req, res) => {
-    const booking = await BookingModel.create({ ...req.body, date: toFullDate(req.body.date) })
+    const date = toFullDate(req.body.date)
+    const conflict = await BookingModel.findSlotConflict(req.body.facilityId, date, req.body.timeSlot)
+    if (conflict) throw ApiError.conflict('That slot was just taken. Pick another time.')
+    const booking = await BookingModel.create({ ...req.body, date })
     res.status(201).json(booking)
   }),
   update: asyncHandler(async (req, res) => {
