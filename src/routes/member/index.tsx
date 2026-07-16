@@ -25,6 +25,13 @@ export const Route = createFileRoute('/member/')({
 
 type LoadStatus = 'loading' | 'ready' | 'error'
 
+function greeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
+}
+
 function MemberDashboard() {
   const { profile } = useMyProfile()
   const firstName = profile?.name.split(' ')[0] ?? 'Resident'
@@ -85,16 +92,17 @@ function MemberDashboard() {
     if (!residentId) return
     let active = true
     setUpcomingStatus('loading')
-    Promise.all([getMyBookings(residentId), getMyReservations(residentId)])
-      .then(([b, r]) => {
-        if (!active) return
-        setBookings(b)
-        setReservations(r)
-        setUpcomingStatus('ready')
-      })
-      .catch(() => {
-        if (active) setUpcomingStatus('error')
-      })
+    Promise.allSettled([getMyBookings(residentId), getMyReservations(residentId)]).then(([b, r]) => {
+      if (!active) return
+      // Show whatever succeeded rather than discarding both on a single failure.
+      if (b.status === 'rejected' && r.status === 'rejected') {
+        setUpcomingStatus('error')
+        return
+      }
+      if (b.status === 'fulfilled') setBookings(b.value)
+      if (r.status === 'fulfilled') setReservations(r.value)
+      setUpcomingStatus('ready')
+    })
     return () => {
       active = false
     }
@@ -150,6 +158,8 @@ function MemberDashboard() {
   const topNotices = [...notices]
     .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.postedAt.localeCompare(a.postedAt))
     .slice(0, 3)
+  const seenBaseline = profile?.noticesLastSeenAt
+  const isNewNotice = (n: Notice) => seenBaseline !== undefined && (seenBaseline === null || n.postedAt > seenBaseline)
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -157,7 +167,7 @@ function MemberDashboard() {
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent-gold">Welcome back</p>
           <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            Good evening, {firstName}
+            {greeting()}, {firstName}
           </h1>
           <p className="mt-1.5 text-sm text-muted-text">{profile?.unit} · {profile ? tierLabel(profile.tier) : ''} Member</p>
         </div>
@@ -274,7 +284,7 @@ function MemberDashboard() {
           ) : (
             <div className="space-y-3">
               {topNotices.map((notice) => (
-                <NoticeCard key={notice.id} notice={notice} />
+                <NoticeCard key={notice.id} notice={notice} isNew={isNewNotice(notice)} />
               ))}
             </div>
           )}
