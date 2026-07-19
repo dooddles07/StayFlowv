@@ -8,6 +8,9 @@ export const notificationController = {
   byResident: asyncHandler(async (req, res) => {
     res.json(await NotificationModel.findByResident(req.params.residentId))
   }),
+  byStaff: asyncHandler(async (req, res) => {
+    res.json(await NotificationModel.findByStaff(req.params.staffId))
+  }),
   create: asyncHandler(async (req, res) => {
     res.status(201).json(await NotificationModel.create(req.body))
   }),
@@ -16,6 +19,10 @@ export const notificationController = {
   }),
   markAllRead: asyncHandler(async (req, res) => {
     await NotificationModel.markAllReadForResident(req.params.residentId)
+    res.status(204).send()
+  }),
+  markAllReadStaff: asyncHandler(async (req, res) => {
+    await NotificationModel.markAllReadForStaff(req.params.staffId)
     res.status(204).send()
   }),
   remove: asyncHandler(async (req, res) => {

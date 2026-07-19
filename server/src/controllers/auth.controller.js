@@ -10,7 +10,14 @@ import { deliverEmailChange, deliverResetToken } from '../utils/mailer.js'
 
 const signToken = (user) =>
   jwt.sign(
-    { sub: user.id, email: user.email, role: user.role, residentId: user.residentId ?? null, tokenVersion: user.tokenVersion },
+    {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      residentId: user.residentId ?? null,
+      staffId: user.staffId ?? null,
+      tokenVersion: user.tokenVersion,
+    },
     env.jwtSecret,
     { expiresIn: env.jwtExpiresIn },
   )

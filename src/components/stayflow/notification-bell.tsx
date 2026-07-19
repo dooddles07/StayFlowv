@@ -7,7 +7,14 @@ import { Button } from '#/components/ui/button'
 import { useMockStore } from '#/lib/store/mock-store'
 import { useAuthStore } from '#/lib/store/auth-store'
 import { useCurrentPortal } from '#/lib/hooks/use-current-portal'
-import { getMyNotifications, markAllNotificationsRead, markNotificationRead, type AppNotification } from '#/lib/api/notification'
+import {
+  getMyNotifications,
+  getMyStaffNotifications,
+  markAllNotificationsRead,
+  markAllStaffNotificationsRead,
+  markNotificationRead,
+  type AppNotification,
+} from '#/lib/api/notification'
 import { cn } from '#/lib/utils'
 import type { NotificationKind } from '#/lib/mock/types'
 
@@ -111,21 +118,27 @@ function NotificationList({
   )
 }
 
-// Live for the member portal (has a real per-resident notification feed).
-// Staff/management still read the local mock store — no per-user backend scoping
-// exists for those roles yet; wiring them is a separate, later pass.
-function MemberNotificationBell({ residentId }: { residentId: string }) {
+// Shared by member and staff — both have a real per-user notification feed, they
+// just differ in which fetch/mark-all-read calls own their id. Management still
+// reads the local mock store; no per-user backend scoping exists for that role.
+function LiveNotificationBell({
+  fetchItems,
+  markAllRead,
+}: {
+  fetchItems: () => Promise<AppNotification[]>
+  markAllRead: () => Promise<void>
+}) {
   const [items, setItems] = React.useState<AppNotification[]>([])
 
   const load = React.useCallback(() => {
     let active = true
-    getMyNotifications(residentId)
+    fetchItems()
       .then((data) => active && setItems(data))
       .catch(() => {})
     return () => {
       active = false
     }
-  }, [residentId])
+  }, [fetchItems])
 
   // Poll so new notifications surface without a full page reload; also refetch on open.
   React.useEffect(() => {
@@ -149,7 +162,7 @@ function MemberNotificationBell({ residentId }: { residentId: string }) {
   async function handleMarkAllRead() {
     setItems((prev) => prev.map((n) => ({ ...n, read: true })))
     try {
-      await markAllNotificationsRead(residentId)
+      await markAllRead()
     } catch {
       load()
     }
@@ -163,6 +176,18 @@ function MemberNotificationBell({ residentId }: { residentId: string }) {
       onOpenChange={(open) => open && load()}
     />
   )
+}
+
+function MemberNotificationBell({ residentId }: { residentId: string }) {
+  const fetchItems = React.useCallback(() => getMyNotifications(residentId), [residentId])
+  const markAllRead = React.useCallback(() => markAllNotificationsRead(residentId), [residentId])
+  return <LiveNotificationBell fetchItems={fetchItems} markAllRead={markAllRead} />
+}
+
+function StaffNotificationBell({ staffId }: { staffId: string }) {
+  const fetchItems = React.useCallback(() => getMyStaffNotifications(staffId), [staffId])
+  const markAllRead = React.useCallback(() => markAllStaffNotificationsRead(staffId), [staffId])
+  return <LiveNotificationBell fetchItems={fetchItems} markAllRead={markAllRead} />
 }
 
 function MockNotificationBell() {
@@ -179,7 +204,9 @@ function MockNotificationBell() {
 export function NotificationBell() {
   const portal = useCurrentPortal()
   const residentId = useAuthStore((s) => s.user?.resident?.id)
+  const staffId = useAuthStore((s) => s.user?.staff?.id)
 
   if (portal === 'member' && residentId) return <MemberNotificationBell residentId={residentId} />
+  if (portal === 'staff' && staffId) return <StaffNotificationBell staffId={staffId} />
   return <MockNotificationBell />
 }

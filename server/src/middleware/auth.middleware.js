@@ -81,3 +81,33 @@ export const requireOwnerRecord =
     }
     next()
   }
+
+// Unlike requireOwnResidentParam, this isn't "anyone but the owning role passes
+// through" — a resident has no business reason to read staff notifications, and
+// neither does a staff peer (the shared operational view is GET /notifications,
+// already open to STAFF/MANAGEMENT). Only MANAGEMENT gets a free pass; STAFF must
+// match their own id; everyone else is forbidden outright.
+export const requireOwnStaffParam =
+  (paramName = 'staffId') =>
+  (req, res, next) => {
+    if (req.user.role === 'MANAGEMENT') return next()
+    if (req.user.role === 'STAFF' && req.params[paramName] === req.user.staffId) return next()
+    throw ApiError.forbidden("Not allowed to access this staff member's data")
+  }
+
+// A notification is owned by whichever of residentId/staffId is set, matching the
+// caller's own role — MEMBER checks residentId, STAFF checks staffId. MANAGEMENT
+// (and any other caller) passes through untouched, same as requireOwnerRecord.
+export const requireOwnNotification =
+  (model) =>
+  async (req, res, next) => {
+    if (req.user.role !== 'MEMBER' && req.user.role !== 'STAFF') return next()
+    const record = await model.findById(req.params.id)
+    if (!record) throw ApiError.notFound('Not found')
+    const ownField = req.user.role === 'MEMBER' ? 'residentId' : 'staffId'
+    const ownId = req.user.role === 'MEMBER' ? req.user.residentId : req.user.staffId
+    if (record[ownField] !== ownId) {
+      throw ApiError.forbidden('Not allowed to access this record')
+    }
+    next()
+  }

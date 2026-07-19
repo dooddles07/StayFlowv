@@ -119,7 +119,8 @@ model StaffMember {
   shift      String
   avatarSeed String
 
-  user User?
+  user             User?
+  appNotifications AppNotification[]
 
   @@map("staff_members")
 }
@@ -282,8 +283,13 @@ model AppNotification {
   // until backfilled, rather than leaking to every resident.
   residentId String?
   resident   Resident? @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  // A notification is owned by exactly one of resident/staff (or neither, pre-scoping) —
+  // never both. Same nullable-until-backfilled reasoning as residentId above.
+  staffId String?
+  staff   StaffMember? @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
   @@index([residentId])
+  @@index([staffId])
   @@map("notifications")
 }
 
