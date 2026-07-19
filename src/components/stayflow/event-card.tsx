@@ -1,6 +1,6 @@
 import { format, parseISO } from 'date-fns'
 import { Calendar, MapPin, Users } from 'lucide-react'
-import { cn } from '#/lib/utils'
+import { cn, hideBrokenImg } from '#/lib/utils'
 import { Button } from '#/components/ui/button'
 import {
   Dialog,
@@ -65,7 +65,7 @@ export function EventCard({
         <DialogTrigger asChild>
           <button type="button" className="flex flex-1 flex-col text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-indigo/50">
             <div className="relative h-36 w-full bg-surface-hover">
-              <img src={event.image} alt={event.title} loading="lazy" decoding="async" className="absolute inset-0 size-full object-cover" />
+              <img src={event.image} alt={event.title} loading="lazy" decoding="async" onError={hideBrokenImg} className="absolute inset-0 size-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent" />
               <span className="absolute left-3 top-3 rounded-full bg-canvas/60 px-2 py-1 text-[11px] font-medium text-accent-gold backdrop-blur">
                 {event.category}

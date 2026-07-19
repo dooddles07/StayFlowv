@@ -23,7 +23,7 @@ import { getRestaurants } from '#/lib/api/restaurant'
 import { cancelReservation, getMyReservations, type ReservationView } from '#/lib/api/diningReservation'
 import { useMyProfile } from '#/lib/store/member-profile'
 import { byHistorySort, isPastDate, type HistorySort } from '#/lib/history'
-import { cn } from '#/lib/utils'
+import { cn, hideBrokenImg } from '#/lib/utils'
 import type { Restaurant } from '#/lib/mock/types'
 
 export const Route = createFileRoute('/member/dining/')({
@@ -220,6 +220,7 @@ function DiningList() {
                   alt={restaurant.name}
                   loading="lazy"
                   decoding="async"
+                  onError={hideBrokenImg}
                   className="absolute inset-0 size-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent" />

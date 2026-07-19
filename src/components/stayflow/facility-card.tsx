@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { MapPin, Star } from 'lucide-react'
 import { StatusPill } from './status-pill'
 import type { Facility } from '#/lib/mock/types'
-import { cn } from '#/lib/utils'
+import { cn, hideBrokenImg } from '#/lib/utils'
 
 export function FacilityCard({ facility, className }: { facility: Facility; className?: string }) {
   return (
@@ -20,6 +20,7 @@ export function FacilityCard({ facility, className }: { facility: Facility; clas
           alt={facility.name}
           loading="lazy"
           decoding="async"
+          onError={hideBrokenImg}
           className="absolute inset-0 size-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent" />

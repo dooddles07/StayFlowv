@@ -5,11 +5,16 @@ export const BookingModel = {
   findById: (id) => prisma.booking.findUnique({ where: { id }, include: { facility: true, resident: true } }),
   findByResident: (residentId) => prisma.booking.findMany({ where: { residentId }, include: { facility: true } }),
   // No resident PII — just enough for the slot picker to know what's taken.
-  findByFacility: (facilityId) =>
-    prisma.booking.findMany({
-      where: { facilityId, status: { not: 'CANCELLED' } },
+  // Bounded to today-forward: the picker only offers the next 14 days, so past
+  // bookings are dead weight and the result set can't grow without bound.
+  findByFacility: (facilityId) => {
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+    return prisma.booking.findMany({
+      where: { facilityId, status: { not: 'CANCELLED' }, date: { gte: startOfToday } },
       select: { date: true, timeSlot: true, status: true },
-    }),
+    })
+  },
   findSlotConflict: (facilityId, date, timeSlot) =>
     prisma.booking.findFirst({ where: { facilityId, date, timeSlot, status: { not: 'CANCELLED' } } }),
   create: (data) => prisma.booking.create({ data, include: { facility: true, resident: true } }),

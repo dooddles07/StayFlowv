@@ -22,7 +22,7 @@ import { ApiError } from '#/lib/api/client'
 import { getFacility } from '#/lib/api/facility'
 import { getFacilityBookings, requestBooking, type FacilitySlot } from '#/lib/api/booking'
 import { useMyProfile } from '#/lib/store/member-profile'
-import { cn } from '#/lib/utils'
+import { cn, hideBrokenImg } from '#/lib/utils'
 
 export const Route = createFileRoute('/member/facilities/$id')({
   loader: async ({ params }) => {
@@ -111,6 +111,7 @@ function FacilityDetail() {
           loading="eager"
           fetchPriority="high"
           decoding="async"
+          onError={hideBrokenImg}
           className="absolute inset-0 size-full object-cover"
         />
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-canvas via-canvas/20 to-transparent" />

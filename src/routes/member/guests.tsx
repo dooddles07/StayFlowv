@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
 import { toast } from 'sonner'
-import { UserPlus, Users } from 'lucide-react'
+import { ChevronDown, History, UserPlus, Users } from 'lucide-react'
 import { PageHeader } from '#/components/stayflow/page-header'
 import { SectionHeader } from '#/components/stayflow/section-header'
 import { StatusPill } from '#/components/stayflow/status-pill'
@@ -26,6 +26,8 @@ import { ApiError } from '#/lib/api/client'
 import { cancelGuest, getMyGuests, registerGuest, updateGuestDetails, type GuestView } from '#/lib/api/guest'
 import { useMyProfile } from '#/lib/store/member-profile'
 import { nextDays, toDateKey, TIME_OF_DAY_OPTIONS } from '#/lib/booking-slots'
+import { byHistorySort, isPastDate, type HistorySort } from '#/lib/history'
+import { cn } from '#/lib/utils'
 
 export const Route = createFileRoute('/member/guests')({
   head: () => ({ meta: [{ title: 'Guests — StayFlow Member' }] }),
@@ -54,6 +56,8 @@ function GuestsPage() {
   const [editPlate, setEditPlate] = React.useState('')
   const [editDate, setEditDate] = React.useState(days[0]!)
   const [editTime, setEditTime] = React.useState('')
+  const [historySort, setHistorySort] = React.useState<HistorySort>('newest')
+  const [showHistory, setShowHistory] = React.useState(false)
 
   const load = React.useCallback((residentId: string) => {
     let active = true
@@ -76,7 +80,35 @@ function GuestsPage() {
     if (profile) return load(profile.id)
   }, [profile, load])
 
-  const myGuests = [...guests].sort((a, b) => b.arrivalDate.localeCompare(a.arrivalDate))
+  // Upcoming = still-expected visits whose arrival date hasn't passed; everything
+  // else (checked-out, or any past date) drops into a collapsible history.
+  const upcomingGuests = [...guests]
+    .filter((g) => g.status !== 'checked-out' && !isPastDate(g.arrivalDate))
+    .sort((a, b) => a.arrivalDate.localeCompare(b.arrivalDate))
+  const pastGuests = [...guests]
+    .filter((g) => g.status === 'checked-out' || isPastDate(g.arrivalDate))
+    .sort((a, b) => byHistorySort(historySort)(a.arrivalDate, b.arrivalDate))
+
+  const guestRow = (guest: GuestView) => (
+    <button
+      key={guest.id}
+      type="button"
+      onClick={() => {
+        setNewGuest(guest)
+        setEditing(false)
+      }}
+      className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4 text-left transition-colors hover:border-accent-indigo/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-indigo/50"
+    >
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium text-foreground">{guest.name}</p>
+        <p className="truncate text-xs text-muted-text">
+          {guest.purpose} · {guest.arrivalDate.slice(0, 10)} at {guest.arrivalTime}
+        </p>
+        <p className="mt-0.5 text-[11px] text-muted-text/70">Pass {guest.passNumber}</p>
+      </div>
+      <StatusPill status={guest.status} />
+    </button>
+  )
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -249,30 +281,51 @@ function GuestsPage() {
                 Retry
               </Button>
             </div>
-          ) : myGuests.length === 0 ? (
+          ) : guests.length === 0 ? (
             <EmptyState icon={Users} title="No guests registered" description="Register a guest to generate their pass." />
           ) : (
-            <div className="space-y-3">
-              {myGuests.map((guest) => (
-                <button
-                  key={guest.id}
-                  type="button"
-                  onClick={() => {
-                    setNewGuest(guest)
-                    setEditing(false)
-                  }}
-                  className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4 text-left transition-colors hover:border-accent-indigo/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-indigo/50"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{guest.name}</p>
-                    <p className="truncate text-xs text-muted-text">
-                      {guest.purpose} · {guest.arrivalDate.slice(0, 10)} at {guest.arrivalTime}
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-muted-text/70">Pass {guest.passNumber}</p>
-                  </div>
-                  <StatusPill status={guest.status} />
-                </button>
-              ))}
+            <div className="space-y-6">
+              {upcomingGuests.length > 0 ? (
+                <div className="space-y-3">{upcomingGuests.map(guestRow)}</div>
+              ) : (
+                <EmptyState icon={Users} title="No upcoming guests" description="Register a guest to generate their pass." />
+              )}
+
+              {pastGuests.length > 0 && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowHistory((v) => !v)}
+                    aria-expanded={showHistory}
+                    className="flex w-full items-center gap-2 rounded-2xl border border-border bg-surface px-4 py-3 text-left text-sm font-medium text-foreground transition-colors hover:border-accent-indigo/40"
+                  >
+                    <History className="size-4 text-accent-gold" />
+                    Guest History
+                    <span className="rounded-full bg-surface-hover px-2 py-0.5 text-xs text-muted-text">{pastGuests.length}</span>
+                    <ChevronDown className={cn('ml-auto size-4 text-muted-text transition-transform', showHistory && 'rotate-180')} />
+                  </button>
+
+                  {showHistory && (
+                    <div className="mt-3">
+                      <div className="mb-3 flex justify-end">
+                        <label className="flex items-center gap-2 text-xs text-muted-text">
+                          <span className="hidden sm:inline">Sort</span>
+                          <select
+                            value={historySort}
+                            onChange={(e) => setHistorySort(e.target.value as HistorySort)}
+                            aria-label="Sort guest history"
+                            className="h-8 rounded-md border border-border bg-canvas px-2 text-xs text-foreground"
+                          >
+                            <option value="newest">Newest first</option>
+                            <option value="oldest">Oldest first</option>
+                          </select>
+                        </label>
+                      </div>
+                      <div className="space-y-3">{pastGuests.map(guestRow)}</div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

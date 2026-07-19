@@ -11,6 +11,7 @@ import { getRestaurant } from '#/lib/api/restaurant'
 import { requestReservation } from '#/lib/api/diningReservation'
 import { useMyProfile } from '#/lib/store/member-profile'
 import { nextDays, toDateKey } from '#/lib/booking-slots'
+import { hideBrokenImg } from '#/lib/utils'
 import type { DiningReservation } from '#/lib/mock/types'
 
 export const Route = createFileRoute('/member/dining/$id')({
@@ -85,6 +86,7 @@ function RestaurantDetail() {
           loading="eager"
           fetchPriority="high"
           decoding="async"
+          onError={hideBrokenImg}
           className="absolute inset-0 size-full object-cover"
         />
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-canvas via-canvas/20 to-transparent" />
