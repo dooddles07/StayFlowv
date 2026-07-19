@@ -314,10 +314,15 @@ model User {
   emailTokenHash      String?   @unique
   emailTokenExpiresAt DateTime?
 
+  // Explicit Restrict (not the implicit default for an optional FK, which is
+  // SetNull) — a resident/staff record with a linked login must never be deletable
+  // out from under it. Residents were only ever protected incidentally, by their
+  // *other* required relations (bookings, guests); staff had no such relation and
+  // were silently deletable with their login orphaned until this was added.
   residentId String?      @unique
-  resident   Resident?    @relation(fields: [residentId], references: [id])
+  resident   Resident?    @relation(fields: [residentId], references: [id], onDelete: Restrict)
   staffId    String?      @unique
-  staff      StaffMember? @relation(fields: [staffId], references: [id])
+  staff      StaffMember? @relation(fields: [staffId], references: [id], onDelete: Restrict)
 
   @@map("users")
 }

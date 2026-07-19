@@ -152,3 +152,42 @@ export const removeVehicle = (id: string) =>
 // Marks the notices feed as read up to now (server stamps the time).
 export const markNoticesSeen = () =>
   api.post<ResidentApiResponse>('/residents/me/notices-seen', {}).then(toProfile)
+
+// --- Admin (STAFF/MANAGEMENT) resident directory ---
+// The admin form only collects identity + unit assignment — phone, emergency
+// contacts, and avatar are left blank/generated for the resident to fill in
+// themselves once they self-register a login (see auth.controller.js `register`).
+// This mirrors how real property managers onboard: reserve the unit now, let the
+// resident complete their own profile once they have access.
+export interface ResidentAdminInput {
+  name: string
+  email: string
+  unit: string
+  tier: ResidentTier
+}
+
+export const createResident = (data: ResidentAdminInput) =>
+  api
+    .post<ResidentApiResponse>('/residents', {
+      ...data,
+      phone: '',
+      avatarSeed: Math.random().toString(36).slice(2, 10),
+      avatarStyle: null,
+      moveInDate: new Date().toISOString(),
+      dietary: [],
+      notifications: true,
+      newsletter: true,
+      emergencyName: '',
+      emergencyRelation: '',
+      emergencyPhone: '',
+    })
+    .then(toProfile)
+
+// Deliberately limited to identity/unit fields. Note: editing email here does not
+// sync a linked login's sign-in email — that only happens through the resident's
+// own verify-then-apply flow — so this is only safe before they've registered, or
+// they'll need to update their sign-in email separately afterward.
+export const updateResident = (id: string, data: ResidentAdminInput) =>
+  api.put<ResidentApiResponse>(`/residents/${id}`, data).then(toProfile)
+
+export const deleteResident = (id: string) => api.del<void>(`/residents/${id}`)
