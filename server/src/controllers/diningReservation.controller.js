@@ -48,9 +48,8 @@ export const diningReservationController = {
       const effectivePartySize = data.partySize ?? current.partySize
 
       if (data.status === 'CONFIRMED' && !current.tableId) {
-        const table = await DiningReservationModel.findAvailableTable(current.restaurantId, effectivePartySize)
+        const table = await DiningReservationModel.assignTableIfAvailable(current.restaurantId, effectivePartySize)
         if (!table) throw ApiError.conflict(`No available table seats a party of ${effectivePartySize} right now.`)
-        await DiningReservationModel.setTableStatus(table.id, 'RESERVED')
         data.tableId = table.id
       }
 
