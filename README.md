@@ -167,7 +167,7 @@ In plain terms: a fast, modern website (React) talking to a proper backend serve
 
 ## For Developers
 
-Curious about the architecture, database design, API routes, or security decisions? The full engineering write-up — system diagrams, data model, auth flow, and more — lives in **[docs/technical-overview.md](docs/technical-overview.md)**.
+Curious about the architecture, database design, API routes, or security decisions? The engineering docs — system diagrams, data model, auth flow, business rules, and more — live in [docs/](docs/): [Architecture](docs/Architecture.md) · [Schema](docs/Schema.md) · [Rules](docs/Rules.md) · [Security](docs/Security.md) · [Design](docs/Design.md).
 
 <br />
 
@@ -175,6 +175,6 @@ Curious about the architecture, database design, API routes, or security decisio
 
 <div align="center">
 
-Built by **QUAN7UM** · [Live Demo](https://stayflow-production-bc16.up.railway.app) · [Technical Docs](docs/technical-overview.md)
+Built by **QUAN7UM** · [Live Demo](https://stayflow-production-bc16.up.railway.app) · [Technical Docs](docs/Architecture.md)
 
 </div>
