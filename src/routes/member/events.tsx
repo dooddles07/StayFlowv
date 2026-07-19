@@ -73,7 +73,7 @@ function EventsPage() {
     try {
       const updated = attending ? await cancelEventRsvp(event.id) : await rsvpToEvent(event.id)
       setEvents((prev) => prev.map((e) => (e.id === event.id ? updated : e)))
-      toast.success(attending ? 'RSVP cancelled' : "You're on the list!")
+      toast.success(attending ? 'Spot given up' : "You're on the list!")
     } catch (err) {
       setEvents(previous)
       toast.error(errText(err))
@@ -97,7 +97,7 @@ function EventsPage() {
 
   return (
     <div className="mx-auto max-w-7xl">
-      <PageHeader eyebrow="Community" title="Events" description="RSVP to upcoming gatherings, wellness sessions, and celebrations." />
+      <PageHeader eyebrow="Community" title="Events" description="Save your spot at upcoming gatherings, wellness sessions, and celebrations." />
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
@@ -123,7 +123,7 @@ function EventsPage() {
             )}
           >
             <CheckCircle2 className="size-3.5" />
-            My RSVPs ({attendingCount})
+            I'm Going ({attendingCount})
           </button>
         )}
       </div>
@@ -158,7 +158,7 @@ function EventsPage() {
             q
               ? 'No events match your search'
               : attendingOnly
-                ? "You haven't RSVP'd to any upcoming events"
+                ? "You haven't saved a spot at any upcoming events"
                 : 'No upcoming events in this category'
           }
         />

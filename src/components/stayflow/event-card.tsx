@@ -100,13 +100,13 @@ export function EventCard({
             </AlertDialogTrigger>
             <AlertDialogContent className="border-border bg-surface">
               <AlertDialogHeader>
-                <AlertDialogTitle>Cancel your RSVP?</AlertDialogTitle>
-                <AlertDialogDescription>You'll give up your spot at {event.title}. You can RSVP again later if space remains.</AlertDialogDescription>
+                <AlertDialogTitle>Give up your spot?</AlertDialogTitle>
+                <AlertDialogDescription>You'll give up your spot at {event.title}. You can save a spot again later if space remains.</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel className="border-border">Keep my spot</AlertDialogCancel>
                 <AlertDialogAction className="bg-rose-500 text-white hover:bg-rose-600" onClick={onCancel}>
-                  Cancel RSVP
+                  Give Up Spot
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -117,7 +117,7 @@ export function EventCard({
             disabled={busy || spotsLeft <= 0}
             className={cn('w-full', 'bg-accent-indigo text-white hover:bg-accent-indigo-soft')}
           >
-            {busy ? 'Saving…' : spotsLeft <= 0 ? 'Fully Booked' : 'RSVP'}
+            {busy ? 'Saving…' : spotsLeft <= 0 ? 'Fully Booked' : "I'm Going"}
           </Button>
         )}
       </div>

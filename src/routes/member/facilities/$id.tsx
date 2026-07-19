@@ -29,8 +29,11 @@ export const Route = createFileRoute('/member/facilities/$id')({
     try {
       const facility = await getFacility(params.id)
       return { facility }
-    } catch {
-      throw notFound()
+    } catch (err) {
+      // Only a genuine "no such facility" should render as Not Found — anything
+      // else (401, network blip) is a real error and shouldn't lie about why.
+      if (err instanceof ApiError && err.status === 404) throw notFound()
+      throw err
     }
   },
   head: ({ loaderData }) => ({ meta: [{ title: `${loaderData?.facility.name ?? 'Facility'} — StayFlow` }] }),

@@ -1,3 +1,6 @@
+import { createIsomorphicFn } from '@tanstack/react-start'
+import { getRequestHeader, getRequestUrl } from '@tanstack/react-start/server'
+
 // Same-origin in production (frontend and API served by the same process/service).
 // Override with VITE_API_URL for local dev if running the backend separately.
 const API_URL = import.meta.env.VITE_API_URL ?? '/api'
@@ -18,15 +21,56 @@ export function setUnauthorizedHandler(fn: (() => void) | null) {
   onUnauthorized = fn
 }
 
+// `credentials: 'include'` only means something to a *browser* fetch — it tells the
+// browser to attach its cookie jar. A loader's fetch during SSR runs in Node, which
+// has no cookie jar at all, so the httpOnly auth cookie never reaches the API and
+// every authenticated SSR request 401s silently. Forward the incoming request's
+// Cookie header explicitly so server-rendered loaders authenticate the same way the
+// browser would. The client branch is a no-op — the browser attaches its own cookies.
+// Split via createIsomorphicFn (not a runtime `typeof window` check) because the
+// server-only `getRequestHeader` import must never reach the client bundle at all.
+const forwardedCookie = createIsomorphicFn()
+  .server(() => {
+    try {
+      return getRequestHeader('cookie')
+    } catch {
+      // No active request context (e.g. server code running outside a request) — the
+      // fetch proceeds unauthenticated rather than crashing the render.
+      return undefined
+    }
+  })
+  .client(() => undefined as string | undefined)
+
+// Browser fetch resolves a relative path ("/api/...") against the current page's
+// origin automatically; Node's fetch has no such concept and throws ("Failed to
+// parse URL") on anything that isn't already absolute. When API_URL is relative
+// (the same-origin merged-deployment default), resolve it against the incoming
+// request's own origin during SSR — this is a single-service deployment, so that's
+// always the right host to call.
+const resolveApiUrl = createIsomorphicFn()
+  .server((path: string) => {
+    if (!API_URL.startsWith('/')) return `${API_URL}${path}`
+    try {
+      return `${getRequestUrl().origin}${API_URL}${path}`
+    } catch {
+      return `${API_URL}${path}`
+    }
+  })
+  .client((path: string) => `${API_URL}${path}`)
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const cookie = forwardedCookie()
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> | undefined),
+  }
+  if (cookie) headers.cookie = cookie
+
+  const res = await fetch(resolveApiUrl(path), {
     ...options,
     // Send/receive the httpOnly auth cookie (the JWT is no longer stored in JS).
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
   })
 
   if (!res.ok) {

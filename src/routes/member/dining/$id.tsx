@@ -29,8 +29,11 @@ export const Route = createFileRoute('/member/dining/$id')({
     try {
       const restaurant = await getRestaurant(params.id)
       return { restaurant }
-    } catch {
-      throw notFound()
+    } catch (err) {
+      // Only a genuine "no such restaurant" should render as Not Found — anything
+      // else (401, network blip) is a real error and shouldn't lie about why.
+      if (err instanceof ApiError && err.status === 404) throw notFound()
+      throw err
     }
   },
   head: ({ loaderData }) => ({ meta: [{ title: `${loaderData?.restaurant.name ?? 'Restaurant'} — StayFlow` }] }),
