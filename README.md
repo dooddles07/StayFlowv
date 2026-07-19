@@ -483,11 +483,11 @@ Backend requires `DATABASE_URL` + `JWT_SECRET` (process exits at boot if missing
 
 | Portal | Login page | Email | Password |
 | --- | --- | --- | --- |
-| Member | `/login/member` | `member@stayflow.io` | `********` |
-| Staff | `/login/staff` | `staff@stayflow.io` | `********` |
-| Management | `/login/management` | `admin@stayflow.io` | `********` |
+| Member | `/login/member` | `member@stayflow.io` | `StayFlow2026!` |
+| Staff | `/login/staff` | `staff@stayflow.io` | `StayFlow2026!` |
+| Management | `/login/management` | `admin@stayflow.io` | `StayFlow2026!` |
 
-> ⚠️ Demo/test logins only. **Rotate before any production use** via the password-reset flow or `server/scripts/reset-test-passwords.js` (set `TEST_PASSWORD`). Never commit real passwords.
+> Demo/portfolio project — these are seeded test accounts, not real user data. **Rotate before any production use** via the password-reset flow or `server/scripts/reset-test-passwords.js` (set `TEST_PASSWORD`).
 
 ### Secret placeholders
 
