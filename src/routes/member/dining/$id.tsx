@@ -6,6 +6,16 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '#/components/ui/alert-dialog'
 import { ApiError } from '#/lib/api/client'
 import { getRestaurant } from '#/lib/api/restaurant'
 import { requestReservation } from '#/lib/api/diningReservation'
@@ -43,9 +53,15 @@ function RestaurantDetail() {
   const [dietary, setDietary] = React.useState('')
   const [seating, setSeating] = React.useState<DiningReservation['seating']>('Indoor')
   const [submitting, setSubmitting] = React.useState(false)
+  const [confirmOpen, setConfirmOpen] = React.useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
+  function openConfirm(e: React.FormEvent) {
     e.preventDefault()
+    if (!profile || submitting) return
+    setConfirmOpen(true)
+  }
+
+  async function handleConfirmSubmit() {
     if (!profile || submitting) return
     setSubmitting(true)
     try {
@@ -65,6 +81,7 @@ function RestaurantDetail() {
       })
       setOccasion('')
       setDietary('')
+      setConfirmOpen(false)
     } catch (err) {
       toast.error(errText(err))
     } finally {
@@ -113,7 +130,7 @@ function RestaurantDetail() {
           <p className="text-xs text-muted-text">Open {restaurant.openHours} · {restaurant.priceRange}</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="animate-fade-in space-y-4 rounded-2xl border border-border bg-surface p-5">
+        <form onSubmit={openConfirm} className="animate-fade-in space-y-4 rounded-2xl border border-border bg-surface p-5">
           <h2 className="text-sm font-semibold text-foreground">Reserve a Table</h2>
 
           <div>
@@ -206,10 +223,35 @@ function RestaurantDetail() {
           </div>
 
           <Button type="submit" disabled={submitting || !profile} className="w-full bg-accent-indigo text-white hover:bg-accent-indigo-soft">
-            {submitting ? 'Requesting…' : 'Request Reservation'}
+            Request Reservation
           </Button>
         </form>
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent className="border-border bg-surface text-foreground">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm your reservation</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-text">
+              <span className="mt-2 flex flex-col gap-1 text-sm text-foreground">
+                <span className="font-medium">{restaurant.name}</span>
+                <span>
+                  {date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} · {time}
+                </span>
+                <span className="text-xs text-muted-text">Party of {partySize} · {seating}</span>
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border bg-transparent text-foreground hover:bg-surface-hover">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction disabled={submitting} className="bg-accent-indigo text-white hover:bg-accent-indigo-soft" onClick={handleConfirmSubmit}>
+              {submitting ? 'Requesting…' : 'Confirm Reservation'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

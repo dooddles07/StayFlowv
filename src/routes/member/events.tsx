@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
 import { toast } from 'sonner'
-import { Calendar, Search } from 'lucide-react'
+import { Calendar, CheckCircle2, Search } from 'lucide-react'
 import { PageHeader } from '#/components/stayflow/page-header'
 import { EventCard } from '#/components/stayflow/event-card'
 import { EmptyState } from '#/components/stayflow/empty-state'
@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { ApiError } from '#/lib/api/client'
 import { cancelEventRsvp, getEvents, rsvpToEvent, type CommunityEventView } from '#/lib/api/event'
 import { useMyProfile } from '#/lib/store/member-profile'
+import { cn } from '#/lib/utils'
 import type { EventCategory } from '#/lib/mock/types'
 
 export const Route = createFileRoute('/member/events')({
@@ -33,6 +34,7 @@ function EventsPage() {
   const [category, setCategory] = React.useState<(typeof categories)[number]>('All')
   const [query, setQuery] = React.useState('')
   const [busyIds, setBusyIds] = React.useState<Set<string>>(new Set())
+  const [attendingOnly, setAttendingOnly] = React.useState(false)
 
   const load = React.useCallback(() => {
     let active = true
@@ -89,21 +91,41 @@ function EventsPage() {
   const visible = upcoming
     .filter((e) => category === 'All' || e.category === category)
     .filter((e) => q === '' || e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q))
+    .filter((e) => !attendingOnly || (!!profile && e.attendeeIds.includes(profile.id)))
     .sort((a, b) => a.date.localeCompare(b.date))
+  const attendingCount = profile ? upcoming.filter((e) => e.attendeeIds.includes(profile.id)).length : 0
 
   return (
     <div className="mx-auto max-w-7xl">
       <PageHeader eyebrow="Community" title="Events" description="RSVP to upcoming gatherings, wellness sessions, and celebrations." />
 
-      <div className="relative mb-4">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-text" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search events…"
-          aria-label="Search events"
-          className="border-border bg-surface pl-9"
-        />
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-text" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search events…"
+            aria-label="Search events"
+            className="border-border bg-surface pl-9"
+          />
+        </div>
+        {attendingCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setAttendingOnly((v) => !v)}
+            aria-pressed={attendingOnly}
+            className={cn(
+              'flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl border px-3.5 text-xs font-medium transition-colors',
+              attendingOnly
+                ? 'border-accent-gold/40 bg-accent-gold/10 text-accent-gold'
+                : 'border-border bg-surface text-muted-text hover:border-accent-indigo/40',
+            )}
+          >
+            <CheckCircle2 className="size-3.5" />
+            My RSVPs ({attendingCount})
+          </button>
+        )}
       </div>
 
       <Tabs value={category} onValueChange={(v) => setCategory(v as typeof category)} className="mb-6">
@@ -130,7 +152,16 @@ function EventsPage() {
           </Button>
         </div>
       ) : visible.length === 0 ? (
-        <EmptyState icon={Calendar} title={q ? 'No events match your search' : 'No upcoming events in this category'} />
+        <EmptyState
+          icon={Calendar}
+          title={
+            q
+              ? 'No events match your search'
+              : attendingOnly
+                ? "You haven't RSVP'd to any upcoming events"
+                : 'No upcoming events in this category'
+          }
+        />
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((event) => {

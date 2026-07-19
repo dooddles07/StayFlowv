@@ -9,7 +9,8 @@ import { Input } from '#/components/ui/input'
 import { getNotices } from '#/lib/api/notice'
 import { markNoticesSeen } from '#/lib/api/resident'
 import { useMyProfile } from '#/lib/store/member-profile'
-import { Megaphone, Search } from 'lucide-react'
+import { Megaphone, Search, Sparkles } from 'lucide-react'
+import { cn } from '#/lib/utils'
 import type { Notice, NoticeCategory } from '#/lib/mock/types'
 
 export const Route = createFileRoute('/member/notices')({
@@ -29,6 +30,7 @@ function NoticesPage() {
   const [status, setStatus] = React.useState<'loading' | 'ready' | 'error'>('loading')
   const [category, setCategory] = React.useState<(typeof categories)[number]>('All')
   const [query, setQuery] = React.useState('')
+  const [unreadOnly, setUnreadOnly] = React.useState(false)
 
   // Snapshot the last-seen time on entry so "New" badges stay visible for this visit,
   // then stamp the feed as seen. `undefined` = not captured yet, `null` = never seen.
@@ -66,9 +68,11 @@ function NoticesPage() {
   const isNew = (n: Notice) => seenBaseline !== undefined && (seenBaseline === null || n.postedAt > seenBaseline)
 
   const q = query.trim().toLowerCase()
+  const unreadCount = notices.filter(isNew).length
   const visible = notices
     .filter((n) => category === 'All' || n.category === category)
     .filter((n) => q === '' || n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q))
+    .filter((n) => !unreadOnly || isNew(n))
     .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.postedAt.localeCompare(a.postedAt))
   const pinned = visible.filter((n) => n.pinned)
   const rest = visible.filter((n) => !n.pinned)
@@ -77,15 +81,33 @@ function NoticesPage() {
     <div className="mx-auto max-w-4xl">
       <PageHeader eyebrow="Community" title="Notices" description="Announcements and updates from StayFlow management." />
 
-      <div className="relative mb-4">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-text" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search notices…"
-          aria-label="Search notices"
-          className="border-border bg-surface pl-9"
-        />
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-text" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search notices…"
+            aria-label="Search notices"
+            className="border-border bg-surface pl-9"
+          />
+        </div>
+        {unreadCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setUnreadOnly((v) => !v)}
+            aria-pressed={unreadOnly}
+            className={cn(
+              'flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl border px-3.5 text-xs font-medium transition-colors',
+              unreadOnly
+                ? 'border-accent-gold/40 bg-accent-gold/10 text-accent-gold'
+                : 'border-border bg-surface text-muted-text hover:border-accent-indigo/40',
+            )}
+          >
+            <Sparkles className="size-3.5" />
+            Unread ({unreadCount})
+          </button>
+        )}
       </div>
 
       <Tabs value={category} onValueChange={(v) => setCategory(v as typeof category)} className="mb-6">
@@ -112,7 +134,10 @@ function NoticesPage() {
           </Button>
         </div>
       ) : visible.length === 0 ? (
-        <EmptyState icon={Megaphone} title={q ? 'No notices match your search' : 'No notices in this category'} />
+        <EmptyState
+          icon={Megaphone}
+          title={q ? 'No notices match your search' : unreadOnly ? "You're all caught up" : 'No notices in this category'}
+        />
       ) : (
         <div className="space-y-6">
           {pinned.length > 0 && (
