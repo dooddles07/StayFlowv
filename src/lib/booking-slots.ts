@@ -39,11 +39,18 @@ export function toDateKey(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
+// Floors to a positive integer; anything invalid (empty, negative, zero, decimal, NaN)
+// falls back to `fallback` instead of silently becoming 0 or a negative number. Used
+// by admin forms that set a venue's own capacity/limit — the field being set here is
+// itself the ceiling other pickers clamp against, so there's no upper bound to enforce.
+export function clampPositiveInt(raw: string, fallback = 1): number {
+  const n = Math.floor(Number(raw))
+  return Number.isFinite(n) && n >= 1 ? n : fallback
+}
+
 // Whole numbers only, 1..max — a party can't be negative, zero, or fractional. Native
 // number-input min/max are cosmetic here since these forms preventDefault() on submit,
 // so this is the only thing actually stopping "-5" or "2.5" from reaching the API.
 export function clampPartySize(raw: string, max: number): number {
-  const n = Math.floor(Number(raw))
-  if (!Number.isFinite(n) || n < 1) return 1
-  return Math.min(n, max)
+  return Math.min(clampPositiveInt(raw), max)
 }

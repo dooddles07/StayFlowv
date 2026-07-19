@@ -21,6 +21,7 @@ import {
 import { ApiError } from '#/lib/api/client'
 import { createRestaurant, deleteRestaurant, getRestaurants, updateRestaurant } from '#/lib/api/restaurant'
 import { getAllTables } from '#/lib/api/table'
+import { clampPositiveInt } from '#/lib/booking-slots'
 import type { DiningTable, Restaurant } from '#/lib/mock/types'
 
 export const Route = createFileRoute('/management/restaurants')({
@@ -248,7 +249,7 @@ function RestaurantsPage() {
                   min={1}
                   max={30}
                   value={editing.maxPartySize}
-                  onChange={(e) => setEditing({ ...editing, maxPartySize: Number(e.target.value) || 1 })}
+                  onChange={(e) => setEditing({ ...editing, maxPartySize: clampPositiveInt(e.target.value, editing.maxPartySize) })}
                   className="border-border bg-canvas"
                 />
                 <p className="mt-1.5 text-xs text-muted-text">Larger groups are expected to call in for private dining.</p>

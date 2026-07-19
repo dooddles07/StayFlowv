@@ -21,6 +21,7 @@ import {
 } from '#/components/ui/alert-dialog'
 import { ApiError } from '#/lib/api/client'
 import { createFacility, deleteFacility, getFacilities, updateFacility } from '#/lib/api/facility'
+import { clampPositiveInt } from '#/lib/booking-slots'
 import type { Facility, FacilityCategory, FacilityStatus } from '#/lib/mock/types'
 
 export const Route = createFileRoute('/management/facilities')({
@@ -266,7 +267,7 @@ function ManagementFacilitiesPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="mb-1.5 text-xs text-muted-text">Capacity</Label>
-                  <Input type="number" value={editing.capacity} onChange={(e) => setEditing({ ...editing, capacity: Number(e.target.value) || 0 })} className="border-border bg-canvas" />
+                  <Input type="number" min={1} value={editing.capacity} onChange={(e) => setEditing({ ...editing, capacity: clampPositiveInt(e.target.value, editing.capacity) })} className="border-border bg-canvas" />
                 </div>
                 <div>
                   <Label className="mb-1.5 text-xs text-muted-text">Open hours</Label>
