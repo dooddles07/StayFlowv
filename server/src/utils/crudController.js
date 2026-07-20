@@ -6,7 +6,9 @@ export const buildCrudController = (model, resourceName = 'Resource') => ({
     res.json(await model.findAll())
   }),
   getOne: asyncHandler(async (req, res) => {
-    const item = await model.findById(req.params.id)
+    // requireOwnerRecord already fetched this row to check ownership — reuse it
+    // instead of running the same findById twice.
+    const item = req.record ?? (await model.findById(req.params.id))
     if (!item) throw ApiError.notFound(`${resourceName} not found`)
     res.json(item)
   }),

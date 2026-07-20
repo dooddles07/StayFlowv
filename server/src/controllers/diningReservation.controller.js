@@ -73,7 +73,9 @@ export const diningReservationController = {
   // generic crudController.remove doesn't know about this side effect, so it's
   // overridden here rather than inherited from `base`.
   remove: asyncHandler(async (req, res) => {
-    const current = await DiningReservationModel.findById(req.params.id)
+    // requireOwnerRecord already fetched this row for a MEMBER caller; STAFF/MANAGEMENT
+    // never populate req.record here, so this still fetches for them.
+    const current = req.record ?? (await DiningReservationModel.findById(req.params.id))
     if (!current) throw ApiError.notFound('Dining reservation not found')
     if (current.tableId) await DiningReservationModel.setTableStatus(current.tableId, 'AVAILABLE')
     await DiningReservationModel.remove(req.params.id)

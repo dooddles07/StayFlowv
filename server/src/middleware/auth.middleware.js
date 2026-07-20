@@ -70,6 +70,9 @@ export const requireOwnResidentBody =
     next()
   }
 
+// Stashes the record it fetches on req.record — a handler further down the chain
+// (buildCrudController.getOne, dining reservation delete's own lookup) would
+// otherwise re-fetch the exact same row by the exact same id a moment later.
 export const requireOwnerRecord =
   (model, ownerField = 'residentId') =>
   async (req, res, next) => {
@@ -79,6 +82,7 @@ export const requireOwnerRecord =
     if (record[ownerField] !== req.user.residentId) {
       throw ApiError.forbidden('Not allowed to access this record')
     }
+    req.record = record
     next()
   }
 

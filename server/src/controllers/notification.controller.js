@@ -1,15 +1,17 @@
 import { NotificationModel } from '../models/notification.model.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 
+const parseLimit = (raw) => (raw ? Number(raw) : undefined)
+
 export const notificationController = {
   list: asyncHandler(async (req, res) => {
-    res.json(await NotificationModel.findAll())
+    res.json(await NotificationModel.findAll({ limit: parseLimit(req.query.limit) }))
   }),
   byResident: asyncHandler(async (req, res) => {
-    res.json(await NotificationModel.findByResident(req.params.residentId))
+    res.json(await NotificationModel.findByResident(req.params.residentId, { limit: parseLimit(req.query.limit) }))
   }),
   byStaff: asyncHandler(async (req, res) => {
-    res.json(await NotificationModel.findByStaff(req.params.staffId))
+    res.json(await NotificationModel.findByStaff(req.params.staffId, { limit: parseLimit(req.query.limit) }))
   }),
   create: asyncHandler(async (req, res) => {
     res.status(201).json(await NotificationModel.create(req.body))

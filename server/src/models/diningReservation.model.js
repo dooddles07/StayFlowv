@@ -1,13 +1,37 @@
 import { prisma } from '../config/db.js'
 
-const includeRelations = { restaurant: true, resident: true, table: true }
+// The client only ever reads restaurant/resident id+name and table id+label+seats off
+// a reservation (see ReservationApiResponse in src/lib/api/diningReservation.ts) —
+// selecting just that instead of the full related rows avoids dragging every
+// restaurant field and resident PII along with each row.
+const reservationSelect = {
+  id: true,
+  restaurantId: true,
+  residentId: true,
+  tableId: true,
+  date: true,
+  time: true,
+  partySize: true,
+  occasion: true,
+  dietary: true,
+  seating: true,
+  status: true,
+  createdAt: true,
+  restaurant: { select: { id: true, name: true } },
+  resident: { select: { id: true, name: true } },
+  table: { select: { id: true, label: true, seats: true } },
+}
 
 export const DiningReservationModel = {
-  findAll: () => prisma.diningReservation.findMany({ include: includeRelations, orderBy: { createdAt: 'desc' } }),
-  findById: (id) => prisma.diningReservation.findUnique({ where: { id }, include: includeRelations }),
-  findByResident: (residentId) => prisma.diningReservation.findMany({ where: { residentId }, include: { restaurant: true, table: true } }),
-  create: (data) => prisma.diningReservation.create({ data, include: includeRelations }),
-  update: (id, data) => prisma.diningReservation.update({ where: { id }, data, include: includeRelations }),
+  // No retention policy on reservations — bounded `take` so this can't become an
+  // unbounded full-table dump as history accumulates (same reasoning as
+  // NotificationModel.findAll).
+  findAll: ({ limit = 500 } = {}) =>
+    prisma.diningReservation.findMany({ select: reservationSelect, orderBy: { createdAt: 'desc' }, take: Math.min(limit, 1000) }),
+  findById: (id) => prisma.diningReservation.findUnique({ where: { id }, select: reservationSelect }),
+  findByResident: (residentId) => prisma.diningReservation.findMany({ where: { residentId }, select: reservationSelect }),
+  create: (data) => prisma.diningReservation.create({ data, select: reservationSelect }),
+  update: (id, data) => prisma.diningReservation.update({ where: { id }, data, select: reservationSelect }),
   remove: (id) => prisma.diningReservation.delete({ where: { id } }),
 
   setTableStatus: (tableId, status) => prisma.diningTable.update({ where: { id: tableId }, data: { status } }),

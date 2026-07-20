@@ -1,9 +1,31 @@
 import { prisma } from '../config/db.js'
 
+// The client only ever reads facility/resident id+name off a booking (see
+// BookingApiResponse in src/lib/api/booking.ts) — selecting just that instead of the
+// full related row avoids dragging every facility field and resident PII along with
+// each of what will become the largest table in the schema.
+const bookingSelect = {
+  id: true,
+  facilityId: true,
+  residentId: true,
+  date: true,
+  timeSlot: true,
+  partySize: true,
+  status: true,
+  notes: true,
+  createdAt: true,
+  facility: { select: { id: true, name: true } },
+  resident: { select: { id: true, name: true } },
+}
+
 export const BookingModel = {
-  findAll: () => prisma.booking.findMany({ include: { facility: true, resident: true }, orderBy: { createdAt: 'desc' } }),
-  findById: (id) => prisma.booking.findUnique({ where: { id }, include: { facility: true, resident: true } }),
-  findByResident: (residentId) => prisma.booking.findMany({ where: { residentId }, include: { facility: true } }),
+  // No retention policy on bookings — bounded `take` so this can't become an
+  // unbounded full-table dump as history accumulates (same reasoning as
+  // NotificationModel.findAll).
+  findAll: ({ limit = 500 } = {}) =>
+    prisma.booking.findMany({ select: bookingSelect, orderBy: { createdAt: 'desc' }, take: Math.min(limit, 1000) }),
+  findById: (id) => prisma.booking.findUnique({ where: { id }, select: bookingSelect }),
+  findByResident: (residentId) => prisma.booking.findMany({ where: { residentId }, select: bookingSelect }),
   // No resident PII — just enough for the slot picker to know what's taken.
   // Bounded to today-forward: the picker only offers the next 14 days, so past
   // bookings are dead weight and the result set can't grow without bound.
@@ -31,7 +53,7 @@ export const BookingModel = {
               where: { facilityId: data.facilityId, date: data.date, timeSlot: data.timeSlot, status: { not: 'CANCELLED' } },
             })
             if (conflict) return null
-            return tx.booking.create({ data, include: { facility: true, resident: true } })
+            return tx.booking.create({ data, select: bookingSelect })
           },
           { isolationLevel: 'Serializable' },
         )
@@ -41,7 +63,7 @@ export const BookingModel = {
       }
     }
   },
-  create: (data) => prisma.booking.create({ data, include: { facility: true, resident: true } }),
-  update: (id, data) => prisma.booking.update({ where: { id }, data, include: { facility: true, resident: true } }),
+  create: (data) => prisma.booking.create({ data, select: bookingSelect }),
+  update: (id, data) => prisma.booking.update({ where: { id }, data, select: bookingSelect }),
   remove: (id) => prisma.booking.delete({ where: { id } }),
 }

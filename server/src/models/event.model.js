@@ -1,6 +1,10 @@
 import { prisma } from '../config/db.js'
 
-const includeRsvps = { rsvps: { include: { resident: true } } }
+// Nothing reads more than residentId off an rsvp — the client's own attendee-name
+// lookups go through a separately-fetched resident directory (see staff/events.tsx),
+// so pulling each attendee's full resident row (email, phone, emergency contacts...)
+// here was pure unused PII exposure on every event list/detail fetch.
+const includeRsvps = { rsvps: { select: { residentId: true } } }
 
 export const EventModel = {
   findAll: () => prisma.communityEvent.findMany({ include: includeRsvps, orderBy: { date: 'asc' } }),

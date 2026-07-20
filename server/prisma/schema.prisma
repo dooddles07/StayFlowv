@@ -157,6 +157,7 @@ model Booking {
   notes      String?
   createdAt  DateTime      @default(now())
 
+  @@index([facilityId, date, status])
   @@map("bookings")
 }
 
@@ -191,6 +192,7 @@ model DiningTable {
 
   reservations DiningReservation[]
 
+  @@index([restaurantId, status])
   @@map("dining_tables")
 }
 
