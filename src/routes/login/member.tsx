@@ -18,6 +18,12 @@ export const Route = createFileRoute('/login/member')({
 function MemberLogin() {
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-canvas px-6 py-16">
+      <img
+        src="/images/hero/member-login.png"
+        alt=""
+        className="pointer-events-none absolute inset-0 size-full object-cover"
+      />
+      <div className="pointer-events-none absolute inset-0 bg-canvas/70" />
       <div
         className="pointer-events-none absolute inset-0"
         style={{

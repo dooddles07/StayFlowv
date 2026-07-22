@@ -19,14 +19,12 @@ function StaffLogin() {
   return (
     <div className="flex min-h-dvh bg-canvas">
       <div className="relative hidden w-[42%] flex-col justify-between overflow-hidden bg-surface p-10 lg:flex">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-60"
-          style={{
-            backgroundImage:
-              'linear-gradient(color-mix(in oklab, var(--color-accent-indigo) 14%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklab, var(--color-accent-indigo) 14%, transparent) 1px, transparent 1px)',
-            backgroundSize: '36px 36px',
-          }}
+        <img
+          src="/images/hero/staff-login.png"
+          alt=""
+          className="pointer-events-none absolute inset-0 size-full object-cover"
         />
+        <div className="pointer-events-none absolute inset-0 bg-surface/70" />
         <Link
           to="/"
           className="relative flex items-center gap-1.5 text-xs font-medium text-muted-text transition-colors hover:text-foreground"

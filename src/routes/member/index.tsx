@@ -165,8 +165,14 @@ function MemberDashboard() {
 
   return (
     <div className="mx-auto max-w-7xl">
-      <div className="animate-fade-in mb-6 flex flex-col justify-between gap-6 rounded-2xl border border-border bg-gradient-to-br from-surface to-surface-hover p-6 sm:flex-row sm:items-center sm:p-8">
-        <div>
+      <div className="animate-fade-in relative mb-6 flex flex-col justify-between gap-6 overflow-hidden rounded-2xl border border-border p-6 sm:flex-row sm:items-center sm:p-8">
+        <img
+          src="/images/hero/member-banner.png"
+          alt=""
+          className="pointer-events-none absolute inset-0 size-full object-cover"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-surface/90 to-surface-hover/80" />
+        <div className="relative">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent-gold">Welcome back</p>
           <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             {greeting()}, {firstName}
@@ -174,12 +180,12 @@ function MemberDashboard() {
           <p className="mt-1.5 text-sm text-muted-text">{profile?.unit} · {profile ? tierLabel(profile.tier) : ''} Member</p>
         </div>
         {weatherStatus === 'loading' ? (
-          <div className="flex gap-3">
+          <div className="relative flex gap-3">
             <div className="h-[52px] w-40 animate-pulse rounded-xl border border-border bg-canvas/40" />
             <div className="h-[52px] w-32 animate-pulse rounded-xl border border-border bg-canvas/40" />
           </div>
         ) : weatherStatus === 'ready' && weather ? (
-          <div className="flex gap-3">
+          <div className="relative flex gap-3">
             <div className="flex items-center gap-2.5 rounded-xl border border-border bg-canvas/40 px-4 py-3">
               <CloudSun className="size-5 text-accent-gold" />
               <div>

@@ -18,15 +18,13 @@ const kpis = [
 function ManagementLogin() {
   return (
     <div className="relative flex min-h-dvh items-center justify-end overflow-hidden bg-canvas px-6 py-16 sm:px-12 lg:px-24">
+      <img
+        src="/images/hero/management-login.png"
+        alt=""
+        className="pointer-events-none absolute inset-0 size-full object-cover"
+      />
+      <div className="pointer-events-none absolute inset-0 bg-canvas/70" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent-gold/70 to-transparent" />
-      <svg className="pointer-events-none absolute inset-0 size-full opacity-[0.14]" preserveAspectRatio="none" viewBox="0 0 800 450">
-        <path
-          d="M0 380 L120 320 L220 350 L340 240 L460 280 L580 160 L680 200 L800 90"
-          fill="none"
-          stroke="var(--color-accent-gold)"
-          strokeWidth="2"
-        />
-      </svg>
 
       <Link
         to="/"
