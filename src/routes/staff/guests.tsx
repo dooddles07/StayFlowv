@@ -67,13 +67,17 @@ function StaffGuestsPage() {
     g.passNumber.toLowerCase().includes(q) ||
     (g.hostName ?? '').toLowerCase().includes(q)
 
+  // A checked-in guest stays actionable here regardless of date — they're physically
+  // on-site until checked out. Gating this tab by arrivalDate === today alone made a
+  // guest who checked in before midnight fall into History (no action buttons) with
+  // no way to ever check them out.
   const arriving = guests
-    .filter((g) => g.arrivalDate.slice(0, 10) === today && (g.status === 'pending' || g.status === 'approved' || g.status === 'checked-in'))
+    .filter((g) => g.status === 'checked-in' || (g.arrivalDate.slice(0, 10) === today && (g.status === 'pending' || g.status === 'approved')))
     .filter(matchesQuery)
     .sort((a, b) => a.arrivalTime.localeCompare(b.arrivalTime))
 
   const history = guests
-    .filter((g) => g.status === 'checked-out' || g.arrivalDate.slice(0, 10) < today)
+    .filter((g) => g.status === 'checked-out')
     .filter(matchesQuery)
     .sort((a, b) => b.arrivalDate.localeCompare(a.arrivalDate))
 
