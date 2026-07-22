@@ -52,7 +52,9 @@ function NoResidentLinked() {
 // Needs only what's already in the auth store (no fetch), so it renders instantly,
 // even before MemberProfileProvider would otherwise mount.
 function ForcedPasswordChange() {
+  const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
+  const logout = useAuthStore((s) => s.logout)
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-canvas px-6">
@@ -67,6 +69,17 @@ function ForcedPasswordChange() {
           </p>
         </div>
         <ChangePasswordForm submitLabel="Set password and continue" />
+        <button
+          type="button"
+          onClick={async () => {
+            await logout()
+            clearStoredPortal()
+            navigate({ to: '/login/member' })
+          }}
+          className="mt-4 w-full text-center text-xs text-muted-text underline-offset-2 hover:text-foreground hover:underline"
+        >
+          Not you? Log out
+        </button>
       </div>
     </div>
   )
