@@ -24,6 +24,7 @@ import { ApiError } from '#/lib/api/client'
 import { getRestaurants } from '#/lib/api/restaurant'
 import { getAllTables } from '#/lib/api/table'
 import { getAllReservations, setReservationStatus, type ReservationView } from '#/lib/api/diningReservation'
+import { timeToMinutes } from '#/lib/booking-slots'
 import { cn } from '#/lib/utils'
 import type { DiningTable, Restaurant } from '#/lib/mock/types'
 
@@ -102,6 +103,10 @@ function StaffDiningPage() {
     try {
       const updated = await setReservationStatus(id, next)
       setReservations((prev) => prev.map((r) => (r.id === id ? updated : r)))
+      // Confirming/arriving/declining all change a table's status server-side (assign,
+      // occupy, or release) — refresh Table Map too, or it silently goes stale until a
+      // full page reload. Best-effort: a failed refresh shouldn't fail the action itself.
+      getAllTables().then(setTables).catch(() => {})
       toast.success(successMessage)
     } catch (err) {
       toast.error(errText(err))
@@ -121,7 +126,7 @@ function StaffDiningPage() {
   const q = query.trim().toLowerCase()
   const sortedReservations = [...reservations]
     .filter((r) => q === '' || (r.restaurantName ?? '').toLowerCase().includes(q) || (r.residentName ?? '').toLowerCase().includes(q))
-    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+    .sort((a, b) => a.date.localeCompare(b.date) || timeToMinutes(a.time) - timeToMinutes(b.time))
 
   return (
     <div className="mx-auto max-w-6xl">

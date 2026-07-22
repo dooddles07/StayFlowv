@@ -22,6 +22,19 @@ export const TIME_OF_DAY_OPTIONS: string[] = (() => {
   return options
 })()
 
+// Parses the first "H:MM AM/PM" found in a string to minutes-since-midnight — plain
+// string comparison on these values (no leading zero) sorts "9:00 AM" after "11:00 AM"
+// and similar. Matches the leading time in a range string too ("7:00 AM – 8:30 AM"),
+// so it works for both single-point times and facility time slots.
+export function timeToMinutes(time: string): number {
+  const match = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
+  if (!match) return 0
+  const [, hourStr, minuteStr, period] = match
+  let hour = Number(hourStr) % 12
+  if (period.toUpperCase() === 'PM') hour += 12
+  return hour * 60 + Number(minuteStr)
+}
+
 export function nextDays(count: number): Date[] {
   const today = new Date()
   today.setHours(0, 0, 0, 0)

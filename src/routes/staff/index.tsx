@@ -10,7 +10,7 @@ import { getAllBookings, type BookingView } from '#/lib/api/booking'
 import { getAllReservations, type ReservationView } from '#/lib/api/diningReservation'
 import { getAllGuests, type GuestView } from '#/lib/api/guest'
 import { getFacilities } from '#/lib/api/facility'
-import { toDateKey } from '#/lib/booking-slots'
+import { timeToMinutes, toDateKey } from '#/lib/booking-slots'
 import type { Facility } from '#/lib/mock/types'
 
 export const Route = createFileRoute('/staff/')({
@@ -81,7 +81,7 @@ function StaffDashboard() {
       who: g.hostName ?? '—',
       status: g.status,
     })),
-  ].sort((a, b) => a.time.localeCompare(b.time))
+  ].sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time))
 
   const tasks = [
     ...bookings

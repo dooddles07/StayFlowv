@@ -7,6 +7,17 @@ import { StatusPill } from '#/components/stayflow/status-pill'
 import { EmptyState } from '#/components/stayflow/empty-state'
 import { Button } from '#/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '#/components/ui/alert-dialog'
 import { ApiError } from '#/lib/api/client'
 import { getAllBookings, setBookingStatus, type BookingView } from '#/lib/api/booking'
 import type { BookingStatus } from '#/lib/mock/types'
@@ -19,6 +30,35 @@ export const Route = createFileRoute('/staff/bookings')({
 
 const statusFilters: (BookingStatus | 'all')[] = ['all', 'pending', 'confirmed', 'cancelled']
 const errText = (err: unknown) => (err instanceof ApiError ? err.message : 'Something went wrong. Try again.')
+
+// Same pattern as staff/dining.tsx's DeclineButton — every other irreversible status
+// change in the app is confirm-gated; this one was a bare click next to the approve
+// button, one misclick from instantly rejecting a resident's booking.
+function RejectButton({ booking, busy, onConfirm }: { booking: BookingView; busy: boolean; onConfirm: () => void }) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button size="icon" variant="ghost" disabled={busy} className="size-7 text-rose-400 hover:bg-rose-500/10">
+          <X className="size-4" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent className="border-border bg-surface">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Reject this booking?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {booking.residentName ?? 'This resident'}'s {booking.facilityName ?? 'facility'} booking for {booking.date.slice(0, 10)} · {booking.timeSlot} will be declined. This can't be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="border-border">Keep it</AlertDialogCancel>
+          <AlertDialogAction className="bg-rose-600 text-white hover:bg-rose-700" onClick={onConfirm}>
+            Reject Booking
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
 
 function BookingsPage() {
   const [bookings, setBookings] = React.useState<BookingView[]>([])
@@ -144,9 +184,7 @@ function BookingsPage() {
                       <Button size="icon" variant="ghost" disabled={busy} className="size-7 text-emerald-400 hover:bg-emerald-500/10" onClick={() => updateStatus(b.id, 'confirmed')}>
                         <Check className="size-4" />
                       </Button>
-                      <Button size="icon" variant="ghost" disabled={busy} className="size-7 text-rose-400 hover:bg-rose-500/10" onClick={() => updateStatus(b.id, 'cancelled')}>
-                        <X className="size-4" />
-                      </Button>
+                      <RejectButton booking={b} busy={busy} onConfirm={() => updateStatus(b.id, 'cancelled')} />
                     </div>
                   )}
                 </div>
@@ -185,9 +223,7 @@ function BookingsPage() {
                             <Button size="icon" variant="ghost" disabled={busy} className="size-7 text-emerald-400 hover:bg-emerald-500/10" onClick={() => updateStatus(b.id, 'confirmed')}>
                               <Check className="size-4" />
                             </Button>
-                            <Button size="icon" variant="ghost" disabled={busy} className="size-7 text-rose-400 hover:bg-rose-500/10" onClick={() => updateStatus(b.id, 'cancelled')}>
-                              <X className="size-4" />
-                            </Button>
+                            <RejectButton booking={b} busy={busy} onConfirm={() => updateStatus(b.id, 'cancelled')} />
                           </div>
                         ) : (
                           <span className="block text-right text-xs text-muted-text/60">—</span>
@@ -223,9 +259,7 @@ function BookingsPage() {
                             <Button size="icon" variant="ghost" disabled={busy} className="size-7 text-emerald-400 hover:bg-emerald-500/10" onClick={() => updateStatus(b.id, 'confirmed')}>
                               <Check className="size-4" />
                             </Button>
-                            <Button size="icon" variant="ghost" disabled={busy} className="size-7 text-rose-400 hover:bg-rose-500/10" onClick={() => updateStatus(b.id, 'cancelled')}>
-                              <X className="size-4" />
-                            </Button>
+                            <RejectButton booking={b} busy={busy} onConfirm={() => updateStatus(b.id, 'cancelled')} />
                           </>
                         )}
                       </div>

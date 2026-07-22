@@ -22,7 +22,7 @@ import {
 } from '#/components/ui/alert-dialog'
 import { ApiError } from '#/lib/api/client'
 import { checkInGuest, checkOutGuest, getAllGuests, setGuestStatus, type GuestView } from '#/lib/api/guest'
-import { toDateKey } from '#/lib/booking-slots'
+import { timeToMinutes, toDateKey } from '#/lib/booking-slots'
 
 export const Route = createFileRoute('/staff/guests')({
   head: () => ({ meta: [{ title: 'Guests — StayFlow Staff' }] }),
@@ -74,7 +74,7 @@ function StaffGuestsPage() {
   const arriving = guests
     .filter((g) => g.status === 'checked-in' || (g.arrivalDate.slice(0, 10) === today && (g.status === 'pending' || g.status === 'approved')))
     .filter(matchesQuery)
-    .sort((a, b) => a.arrivalTime.localeCompare(b.arrivalTime))
+    .sort((a, b) => timeToMinutes(a.arrivalTime) - timeToMinutes(b.arrivalTime))
 
   const history = guests
     .filter((g) => g.status === 'checked-out')
