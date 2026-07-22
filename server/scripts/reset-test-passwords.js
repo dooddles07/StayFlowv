@@ -1,5 +1,14 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import dotenv from 'dotenv'
 import bcrypt from 'bcryptjs'
 import { PrismaClient } from '@prisma/client'
+
+// Load the repo's single .env by file-relative path, not CWD — this script needs to
+// work whether it's run from root or from server/, and there's no server/.env to fall
+// back on (see docs/Security.md#environment-variables).
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+dotenv.config({ path: path.resolve(__dirname, '../../.env') })
 
 const prisma = new PrismaClient()
 
