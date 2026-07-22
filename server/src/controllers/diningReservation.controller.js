@@ -27,7 +27,17 @@ export const diningReservationController = {
   create: asyncHandler(async (req, res) => {
     const partySize = requirePositiveInt(req.body.partySize, 'partySize')
     await assertWithinCapacity(req.body.restaurantId, partySize)
-    const reservation = await DiningReservationModel.create({ ...req.body, date: toFullDate(req.body.date), partySize })
+    // Force PENDING and strip any client-supplied tableId — a raw spread would otherwise
+    // let a MEMBER set status: 'CONFIRMED' + tableId directly on create, self-assigning
+    // any table (occupied or not) without going through assignTableIfAvailable's
+    // serializable-transaction capacity check.
+    const reservation = await DiningReservationModel.create({
+      ...req.body,
+      date: toFullDate(req.body.date),
+      partySize,
+      status: 'PENDING',
+      tableId: null,
+    })
     res.status(201).json(reservation)
   }),
   // Status transitions carry real-world side effects on the table map — a plain field

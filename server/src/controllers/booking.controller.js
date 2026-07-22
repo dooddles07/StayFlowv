@@ -29,7 +29,9 @@ export const bookingController = {
     const date = toFullDate(req.body.date)
     const partySize = requirePositiveInt(req.body.partySize, 'partySize')
     await assertWithinCapacity(req.body.facilityId, partySize)
-    const booking = await BookingModel.createIfNoConflict({ ...req.body, date, partySize })
+    // Force PENDING regardless of client input — a raw spread would otherwise let a
+    // MEMBER set status: 'CONFIRMED' directly on create and skip staff approval entirely.
+    const booking = await BookingModel.createIfNoConflict({ ...req.body, date, partySize, status: 'PENDING' })
     if (!booking) throw ApiError.conflict('That slot was just taken. Pick another time.')
     res.status(201).json(booking)
   }),
