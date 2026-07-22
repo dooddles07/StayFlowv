@@ -2,8 +2,43 @@ import { ResidentModel } from '../models/resident.model.js'
 import { buildCrudController } from '../utils/crudController.js'
 import { ApiError } from '../utils/ApiError.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
+import { pickAllowed } from '../utils/validate.js'
 
-export const residentController = buildCrudController(ResidentModel, 'Resident')
+const base = buildCrudController(ResidentModel, 'Resident')
+
+// Mirrors what src/lib/api/resident.ts's createResident actually sends: identity/unit
+// fields plus the defaults it fills in for columns the schema requires non-null.
+const ADMIN_CREATE_FIELDS = [
+  'name',
+  'email',
+  'phone',
+  'unit',
+  'tier',
+  'avatarSeed',
+  'avatarStyle',
+  'moveInDate',
+  'dietary',
+  'notifications',
+  'newsletter',
+  'emergencyName',
+  'emergencyRelation',
+  'emergencyPhone',
+]
+// updateResident is deliberately limited to identity/unit — everything else is the
+// resident's own to manage via /residents/me once they have a login.
+const ADMIN_UPDATE_FIELDS = ['name', 'email', 'unit', 'tier']
+
+export const residentController = {
+  ...base,
+  create: asyncHandler(async (req, res) => {
+    const item = await ResidentModel.create(pickAllowed(req.body, ADMIN_CREATE_FIELDS))
+    res.status(201).json(item)
+  }),
+  update: asyncHandler(async (req, res) => {
+    const item = await ResidentModel.update(req.params.id, pickAllowed(req.body, ADMIN_UPDATE_FIELDS))
+    res.json(item)
+  }),
+}
 
 // Fields a MEMBER may change on their own profile. Deliberately excludes
 // unit, tier, avatarSeed, moveInDate (admin-controlled) and email (tied to the
