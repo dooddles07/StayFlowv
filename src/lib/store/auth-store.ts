@@ -17,6 +17,9 @@ interface AuthUser {
   email: string
   role: PortalRole
   displayName: string
+  // True until a MANAGEMENT-issued temp password is replaced with the resident's own —
+  // see the forced-change gate in src/routes/member.tsx.
+  mustChangePassword: boolean
   // Present when role === 'STAFF' — the login/me endpoints include this relation.
   staff?: { id: string; role: string; avatarSeed: string } | null
   // Present when role === 'MEMBER' — same endpoints include this relation too.
@@ -59,6 +62,9 @@ export const useAuthStore = create<AuthState>()(
       changePassword: async (currentPassword, newPassword) => {
         // Server rotates the password and re-issues this session's cookie; other sessions are revoked.
         await api.post('/auth/change-password', { currentPassword, newPassword })
+        // Clears mustChangePassword locally so the forced-change gate lifts immediately,
+        // without waiting on a reload or a fresh /auth/me fetch.
+        set((state) => (state.user ? { user: { ...state.user, mustChangePassword: false } } : state))
       },
       requestEmailChange: async (newEmail, currentPassword) => {
         // Server emails a verification link to the new address; nothing changes until it's opened.

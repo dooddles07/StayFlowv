@@ -40,6 +40,8 @@ interface ResidentApiResponse {
   noticesLastSeenAt: string | null
   family: ResidentFamilyMember[]
   vehicles: ResidentVehicle[]
+  // Null until MANAGEMENT issues a login for this resident (see createResidentLogin).
+  user: { id: string; mustChangePassword: boolean } | null
 }
 
 // View model the profile UI consumes (nested, matches the form structure).
@@ -59,6 +61,9 @@ export interface ResidentProfile {
   emergencyContact: { name: string; relation: string; phone: string }
   emergencyContact2: { name: string; relation: string; phone: string }
   preferences: { dietary: string[]; notifications: boolean; newsletter: boolean }
+  // 'none': no login yet. 'pending': login exists, still on the temp password.
+  // 'active': resident has set their own password.
+  loginStatus: 'none' | 'pending' | 'active'
 }
 
 // Every field a member may persist. The server enforces this allowlist too.
@@ -99,6 +104,7 @@ const toProfile = (r: ResidentApiResponse): ResidentProfile => ({
     phone: r.emergency2Phone ?? '',
   },
   preferences: { dietary: r.dietary, notifications: r.notifications, newsletter: r.newsletter },
+  loginStatus: !r.user ? 'none' : r.user.mustChangePassword ? 'pending' : 'active',
 })
 
 const TIER_LABELS: Record<ResidentTier, string> = {
@@ -155,10 +161,11 @@ export const markNoticesSeen = () =>
 
 // --- Admin (STAFF/MANAGEMENT) resident directory ---
 // The admin form only collects identity + unit assignment — phone, emergency
-// contacts, and avatar are left blank/generated for the resident to fill in
-// themselves once they self-register a login (see auth.controller.js `register`).
-// This mirrors how real property managers onboard: reserve the unit now, let the
-// resident complete their own profile once they have access.
+// contacts, and avatar are left blank for the resident to fill in themselves once
+// they have a login. Logins are no longer self-registered: MANAGEMENT issues them
+// directly via createResidentLogin (see resident.controller.js `createLogin`),
+// separately from profile creation. STAFF can still create a profile-only row to
+// reserve a unit before the resident (or their login) exists.
 export interface ResidentAdminInput {
   name: string
   email: string
@@ -185,9 +192,21 @@ export const createResident = (data: ResidentAdminInput) =>
 
 // Deliberately limited to identity/unit fields. Note: editing email here does not
 // sync a linked login's sign-in email — that only happens through the resident's
-// own verify-then-apply flow — so this is only safe before they've registered, or
-// they'll need to update their sign-in email separately afterward.
+// own verify-then-apply flow — so this is only safe before a login has been created
+// for them, or they'll need to update their sign-in email separately afterward.
 export const updateResident = (id: string, data: ResidentAdminInput) =>
   api.put<ResidentApiResponse>(`/residents/${id}`, data).then(toProfile)
 
 export const deleteResident = (id: string) => api.del<void>(`/residents/${id}`)
+
+// MANAGEMENT only (enforced server-side) — issues a login for an existing resident.
+// tempPassword is shown exactly once in this response; it is never retrievable again.
+export interface ResidentLoginResult {
+  tempPassword: string
+  resident: ResidentProfile
+}
+
+export const createResidentLogin = (residentId: string): Promise<ResidentLoginResult> =>
+  api
+    .post<{ resident: ResidentApiResponse; tempPassword: string; email: string }>(`/residents/${residentId}/create-login`, {})
+    .then((r) => ({ tempPassword: r.tempPassword, resident: toProfile(r.resident) }))

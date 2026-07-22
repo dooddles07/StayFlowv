@@ -3,6 +3,9 @@ import { prisma } from '../config/db.js'
 const includeRelations = {
   family: true,
   vehicles: true,
+  // Minimal projection, no passwordHash or any other sensitive field — just enough
+  // for the admin directory to show login status per resident.
+  user: { select: { id: true, mustChangePassword: true } },
 }
 
 export const ResidentModel = {

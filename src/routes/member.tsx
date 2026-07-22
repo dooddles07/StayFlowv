@@ -1,8 +1,9 @@
 import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
-import { ShieldAlert } from 'lucide-react'
+import { KeyRound, ShieldAlert } from 'lucide-react'
 import { AppShell } from '#/components/stayflow/app-shell'
 import { Button } from '#/components/ui/button'
+import { ChangePasswordForm } from '#/components/stayflow/change-password-form'
 import { useRequireAuth } from '#/lib/hooks/use-require-auth'
 import { MemberProfileProvider, useMyProfile } from '#/lib/store/member-profile'
 import { getNotices } from '#/lib/api/notice'
@@ -41,6 +42,31 @@ function NoResidentLinked() {
         >
           Log out
         </Button>
+      </div>
+    </div>
+  )
+}
+
+// A MANAGEMENT-issued temp password lands here instead of the dashboard — every
+// other endpoint 403s (blockIfMustChangePassword, server-side) until this is done.
+// Needs only what's already in the auth store (no fetch), so it renders instantly,
+// even before MemberProfileProvider would otherwise mount.
+function ForcedPasswordChange() {
+  const user = useAuthStore((s) => s.user)
+
+  return (
+    <div className="flex min-h-dvh items-center justify-center bg-canvas px-6">
+      <div className="w-full max-w-sm rounded-2xl border border-border bg-surface p-6 shadow-lg">
+        <div className="mb-5 flex flex-col items-center text-center">
+          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-accent-gold/15 text-accent-gold">
+            <KeyRound className="size-7" />
+          </div>
+          <h1 className="text-lg font-semibold text-foreground">Set your password</h1>
+          <p className="mt-2 text-sm text-muted-text">
+            {user?.email ?? 'Your account'} was set up with a temporary password. Choose your own to continue.
+          </p>
+        </div>
+        <ChangePasswordForm submitLabel="Set password and continue" />
       </div>
     </div>
   )
@@ -89,8 +115,13 @@ function MemberShell() {
 
 function MemberLayout() {
   const ready = useRequireAuth('member')
+  const mustChangePassword = useAuthStore((s) => s.user?.mustChangePassword)
 
   if (!ready) return null
+  // Checked before MemberProfileProvider mounts — its GET /residents/me would 403
+  // under blockIfMustChangePassword, and that error isn't handled gracefully by the
+  // provider's status branching (only 404 is special-cased there).
+  if (mustChangePassword) return <ForcedPasswordChange />
 
   return (
     <MemberProfileProvider>

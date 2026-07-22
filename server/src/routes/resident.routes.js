@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { residentController, residentSelfController } from '../controllers/resident.controller.js'
 import { buildCrudRouter } from '../utils/crudRouter.js'
+import { requireRole } from '../middleware/auth.middleware.js'
 
 const router = Router()
 
@@ -18,6 +19,11 @@ router.put('/me/vehicles/:id', residentSelfController.updateVehicle)
 router.delete('/me/vehicles/:id', residentSelfController.removeVehicle)
 
 router.post('/me/notices-seen', residentSelfController.markNoticesSeen)
+
+// MANAGEMENT-only: issue a portal login for an existing resident profile. Stricter
+// than the STAFF+MANAGEMENT write access below, so it needs its own role guard
+// rather than inheriting buildCrudRouter's writeRoles.
+router.post('/:id/create-login', requireRole('MANAGEMENT'), residentController.createLogin)
 
 router.use(
   buildCrudRouter(residentController, {

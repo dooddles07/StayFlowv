@@ -1,27 +1,32 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
 import { toast } from 'sonner'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Copy, KeyRound, Pencil, Plus, Trash2 } from 'lucide-react'
 import { PageHeader } from '#/components/stayflow/page-header'
 import { AvatarInitials } from '#/components/stayflow/avatar-initials'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
+import { Checkbox } from '#/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '#/components/ui/sheet'
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '#/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
+  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from '#/components/ui/alert-dialog'
 import { ApiError } from '#/lib/api/client'
+import { useAuthStore } from '#/lib/store/auth-store'
 import {
   createResident,
+  createResidentLogin,
   deleteResident,
   getAllResidents,
   tierLabel,
@@ -72,16 +77,31 @@ function newStaffDraft(): StaffDraft {
   return { name: '', role: 'Concierge', email: '', shift: 'Morning' }
 }
 
+// 'active' gets no badge at all — keeping visual noise low on the common case once
+// most residents have logins.
+function LoginStatusBadge({ status }: { status: ResidentProfile['loginStatus'] }) {
+  if (status === 'none') return <span className="text-xs text-muted-text">No login</span>
+  if (status === 'pending') {
+    return <span className="rounded-full bg-accent-gold/10 px-2 py-0.5 text-[11px] font-medium text-accent-gold">Pending</span>
+  }
+  return null
+}
+
 function UsersPage() {
+  const isManagement = useAuthStore((s) => s.user?.role === 'MANAGEMENT')
   const [residents, setResidents] = React.useState<ResidentProfile[]>([])
   const [staff, setStaff] = React.useState<StaffMemberView[]>([])
   const [status, setStatus] = React.useState<'loading' | 'ready' | 'error'>('loading')
   const [tab, setTab] = React.useState<'members' | 'staff'>('members')
   const [editingResident, setEditingResident] = React.useState<ResidentDraft | null>(null)
   const [editingStaff, setEditingStaff] = React.useState<StaffDraft | null>(null)
+  const [createLoginToo, setCreateLoginToo] = React.useState(true)
   const [deleteTarget, setDeleteTarget] = React.useState<{ kind: 'resident' | 'staff'; id: string; name: string } | null>(null)
+  const [confirmLoginTarget, setConfirmLoginTarget] = React.useState<{ id: string; name: string } | null>(null)
+  const [revealedLogin, setRevealedLogin] = React.useState<{ name: string; email: string; tempPassword: string } | null>(null)
   const [saving, setSaving] = React.useState(false)
   const [deleting, setDeleting] = React.useState(false)
+  const [creatingLogin, setCreatingLogin] = React.useState(false)
 
   const load = React.useCallback(() => {
     let active = true
@@ -117,6 +137,7 @@ function UsersPage() {
         unit: editingResident.unit.trim(),
         tier: editingResident.tier,
       }
+      const isNew = !editingResident.id
       const saved = editingResident.id ? await updateResident(editingResident.id, payload) : await createResident(payload)
       setResidents((prev) => {
         const exists = prev.some((r) => r.id === saved.id)
@@ -124,10 +145,37 @@ function UsersPage() {
       })
       toast.success(editingResident.id ? 'Member updated' : 'Member added')
       setEditingResident(null)
+
+      // Login creation is a separate call from profile creation — a failure here must
+      // never undo or obscure the "Member added" success above.
+      if (isNew && isManagement && createLoginToo) {
+        try {
+          const { resident, tempPassword } = await createResidentLogin(saved.id)
+          setResidents((prev) => prev.map((r) => (r.id === resident.id ? resident : r)))
+          setRevealedLogin({ name: resident.name, email: resident.email, tempPassword })
+        } catch {
+          toast.error('Member added, but the login could not be created automatically. Use Create Login from the table to try again.')
+        }
+      }
     } catch (err) {
       toast.error(errText(err))
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function confirmCreateLogin() {
+    if (!confirmLoginTarget) return
+    setCreatingLogin(true)
+    try {
+      const { resident, tempPassword } = await createResidentLogin(confirmLoginTarget.id)
+      setResidents((prev) => prev.map((r) => (r.id === resident.id ? resident : r)))
+      setConfirmLoginTarget(null)
+      setRevealedLogin({ name: resident.name, email: resident.email, tempPassword })
+    } catch (err) {
+      toast.error(errText(err))
+    } finally {
+      setCreatingLogin(false)
     }
   }
 
@@ -188,7 +236,14 @@ function UsersPage() {
         actions={
           <Button
             className="gap-1.5 bg-accent-indigo text-white hover:bg-accent-indigo-soft"
-            onClick={() => (tab === 'members' ? setEditingResident(newResidentDraft()) : setEditingStaff(newStaffDraft()))}
+            onClick={() => {
+              if (tab === 'members') {
+                setEditingResident(newResidentDraft())
+                setCreateLoginToo(true)
+              } else {
+                setEditingStaff(newStaffDraft())
+              }
+            }}
           >
             <Plus className="size-4" />
             Add {tab === 'members' ? 'Member' : 'Staff'}
@@ -230,9 +285,21 @@ function UsersPage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">{r.name}</p>
                     <p className="truncate text-xs text-muted-text">{r.unit} · {tierLabel(r.tier)}</p>
+                    <LoginStatusBadge status={r.loginStatus} />
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-1.5">
+                  {isManagement && r.loginStatus === 'none' && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="size-7 text-accent-gold hover:bg-accent-gold/10"
+                      aria-label={`Create login for ${r.name}`}
+                      onClick={() => setConfirmLoginTarget({ id: r.id, name: r.name })}
+                    >
+                      <KeyRound className="size-3.5" />
+                    </Button>
+                  )}
                   <Button
                     size="icon"
                     variant="ghost"
@@ -261,6 +328,7 @@ function UsersPage() {
                   <th className="px-4 py-3 font-medium">Unit</th>
                   <th className="px-4 py-3 font-medium">Tier</th>
                   <th className="px-4 py-3 font-medium">Contact</th>
+                  <th className="px-4 py-3 font-medium">Login</th>
                   <th className="px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
@@ -277,7 +345,21 @@ function UsersPage() {
                     <td className="px-4 py-3 text-muted-text">{tierLabel(r.tier)}</td>
                     <td className="px-4 py-3 text-muted-text">{r.email}</td>
                     <td className="px-4 py-3">
+                      <LoginStatusBadge status={r.loginStatus} />
+                    </td>
+                    <td className="px-4 py-3">
                       <div className="flex justify-end gap-1.5">
+                        {isManagement && r.loginStatus === 'none' && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="size-7 text-accent-gold hover:bg-accent-gold/10"
+                            aria-label={`Create login for ${r.name}`}
+                            onClick={() => setConfirmLoginTarget({ id: r.id, name: r.name })}
+                          >
+                            <KeyRound className="size-3.5" />
+                          </Button>
+                        )}
                         <Button
                           size="icon"
                           variant="ghost"
@@ -420,9 +502,18 @@ function UsersPage() {
                   </SelectContent>
                 </Select>
               </div>
+              {!editingResident.id && isManagement && (
+                <label className="flex items-start gap-2.5 rounded-xl border border-border bg-canvas p-3">
+                  <Checkbox checked={createLoginToo} onCheckedChange={(v) => setCreateLoginToo(!!v)} className="mt-0.5" />
+                  <span className="text-xs text-muted-text">
+                    <span className="block font-medium text-foreground">Also create a login now</span>
+                    Generates a temporary password to relay to the resident in person. You can do this later from the table instead.
+                  </span>
+                </label>
+              )}
               {!editingResident.id && (
                 <p className="text-[11px] text-muted-text">
-                  This reserves the unit. Phone and emergency contact are filled in by the resident once they sign in.
+                  This reserves the unit. Phone and emergency contact are filled in by the resident once they have a login.
                 </p>
               )}
               <Button className="w-full bg-accent-indigo text-white hover:bg-accent-indigo-soft" disabled={saving} onClick={saveResident}>
@@ -499,6 +590,69 @@ function UsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!confirmLoginTarget} onOpenChange={(open) => !open && setConfirmLoginTarget(null)}>
+        <AlertDialogContent className="border-border bg-surface text-foreground">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Create a login for {confirmLoginTarget?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This generates a one-time temporary password. You'll need to relay it to them in person — it won't be shown again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border bg-transparent text-foreground hover:bg-surface-hover">Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={creatingLogin} className="bg-accent-indigo text-white hover:bg-accent-indigo-soft" onClick={confirmCreateLogin}>
+              {creatingLogin ? 'Creating…' : 'Create Login'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={!!revealedLogin} onOpenChange={(open) => !open && setRevealedLogin(null)}>
+        <DialogContent className="border-border bg-surface text-foreground">
+          <DialogHeader>
+            <DialogTitle>Login created</DialogTitle>
+          </DialogHeader>
+          {revealedLogin && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-text">
+                Give these credentials to <span className="font-medium text-foreground">{revealedLogin.name}</span> in person.
+                The password is shown once — it can't be retrieved again after you close this.
+              </p>
+              <div className="space-y-3 rounded-xl border border-border bg-canvas p-3">
+                <div>
+                  <Label className="mb-1 block text-[11px] text-muted-text">Email</Label>
+                  <p className="text-sm font-medium text-foreground">{revealedLogin.email}</p>
+                </div>
+                <div>
+                  <Label className="mb-1 block text-[11px] text-muted-text">Temporary password</Label>
+                  <div className="flex items-center gap-2">
+                    <Input readOnly value={revealedLogin.tempPassword} className="border-border bg-surface font-mono" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0 border-border"
+                      aria-label="Copy password"
+                      onClick={() => {
+                        navigator.clipboard.writeText(revealedLogin.tempPassword)
+                        toast.success('Password copied')
+                      }}
+                    >
+                      <Copy className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button className="w-full bg-accent-indigo text-white hover:bg-accent-indigo-soft">Done</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

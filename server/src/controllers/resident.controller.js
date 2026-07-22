@@ -1,9 +1,12 @@
+import bcrypt from 'bcryptjs'
 import { ResidentModel } from '../models/resident.model.js'
+import { UserModel } from '../models/user.model.js'
 import { buildCrudController } from '../utils/crudController.js'
 import { ApiError } from '../utils/ApiError.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { pickAllowed } from '../utils/validate.js'
 import { logAdminAction } from '../utils/adminLog.js'
+import { BCRYPT_ROUNDS, generateTempPassword } from '../utils/password.js'
 
 const base = buildCrudController(ResidentModel, 'Resident')
 
@@ -45,6 +48,40 @@ export const residentController = {
     await ResidentModel.remove(req.params.id)
     logAdminAction(req, 'DELETE', 'Resident', req.params.id)
     res.status(204).send()
+  }),
+  // MANAGEMENT-only (route-gated): issues a portal login for an existing resident
+  // profile — the resident's own email on file becomes their sign-in identity, and a
+  // system-generated temp password is returned once for management to relay in person.
+  createLogin: asyncHandler(async (req, res) => {
+    const resident = await ResidentModel.findById(req.params.id)
+    if (!resident) throw ApiError.notFound('Resident not found')
+
+    const existingLogin = await UserModel.findByResidentId(resident.id)
+    if (existingLogin) throw ApiError.conflict('This resident already has a login.')
+
+    // Defensive: catches resident.email colliding with an unrelated existing account
+    // (e.g. a STAFF/MANAGEMENT login on the same address) with a clean message instead
+    // of letting the User.email unique constraint surface as a raw P2002.
+    const emailTaken = await UserModel.findByEmail(resident.email)
+    if (emailTaken) throw ApiError.conflict('A login already exists for this email address.')
+
+    const tempPassword = generateTempPassword()
+    const passwordHash = await bcrypt.hash(tempPassword, BCRYPT_ROUNDS)
+    const user = await UserModel.create({
+      email: resident.email,
+      passwordHash,
+      role: 'MEMBER',
+      displayName: resident.name,
+      residentId: resident.id,
+      mustChangePassword: true,
+    })
+    logAdminAction(req, 'CREATE', 'ResidentLogin', resident.id)
+
+    res.status(201).json({
+      resident: { ...resident, user: { id: user.id, mustChangePassword: true } },
+      tempPassword,
+      email: user.email,
+    })
   }),
 }
 

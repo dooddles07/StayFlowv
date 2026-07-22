@@ -3,11 +3,11 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { env } from '../config/env.js'
 import { UserModel } from '../models/user.model.js'
-import { ResidentModel } from '../models/resident.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { AuthEventType, logAuthEvent } from '../utils/authLog.js'
 import { deliverEmailChange, deliverResetToken } from '../utils/mailer.js'
+import { BCRYPT_ROUNDS, assertValidPassword } from '../utils/password.js'
 
 const signToken = (user) =>
   jwt.sign(
@@ -18,6 +18,7 @@ const signToken = (user) =>
       residentId: user.residentId ?? null,
       staffId: user.staffId ?? null,
       tokenVersion: user.tokenVersion,
+      mustChangePassword: user.mustChangePassword ?? false,
     },
     env.jwtSecret,
     { expiresIn: env.jwtExpiresIn },
@@ -42,60 +43,16 @@ const setAuthCookie = (res, token) => res.cookie(AUTH_COOKIE, token, cookieOptio
 const LOCK_THRESHOLD = 5
 const LOCK_DURATION_MS = 15 * 60 * 1000
 
-const BCRYPT_ROUNDS = 12
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000
 const EMAIL_TOKEN_TTL_MS = 60 * 60 * 1000
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const MIN_PASSWORD_LENGTH = 8
-// bcrypt silently truncates input past 72 bytes — reject longer so the stored hash matches what the user typed.
-const MAX_PASSWORD_LENGTH = 72
 const hashResetToken = (raw) => crypto.createHash('sha256').update(raw).digest('hex')
-
-const assertValidPassword = (password) => {
-  if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
-    throw ApiError.badRequest(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
-  }
-  if (Buffer.byteLength(password, 'utf8') > MAX_PASSWORD_LENGTH) {
-    throw ApiError.badRequest(`Password must be at most ${MAX_PASSWORD_LENGTH} bytes`)
-  }
-}
 
 // Strip password hash and all internal auth bookkeeping from API responses.
 const sanitize = (user) => {
   const { passwordHash, tokenVersion, failedLoginCount, lockedUntil, resetTokenHash, resetTokenExpiresAt, ...rest } = user
   return rest
 }
-
-export const register = asyncHandler(async (req, res) => {
-  const { email, password, displayName, residentId } = req.body
-  if (!email || !password || !displayName) {
-    throw ApiError.badRequest('email, password, displayName are required')
-  }
-  assertValidPassword(password)
-
-  const existing = await UserModel.findByEmail(email)
-  if (existing) throw ApiError.conflict('Email already registered')
-
-  // A residentId claims an existing profile — without proof of ownership, anyone
-  // could link their new login to any resident's record just by guessing/enumerating
-  // ids. Require the email to match the one already on file for that resident (set by
-  // management when the profile was created). One generic message for "no such
-  // resident" and "email doesn't match" alike, so this can't be used to enumerate
-  // which resident ids exist.
-  if (residentId) {
-    const resident = await ResidentModel.findById(residentId)
-    if (!resident || resident.email.toLowerCase() !== String(email).toLowerCase()) {
-      throw ApiError.badRequest('That resident ID and email do not match our records.')
-    }
-  }
-
-  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
-  const user = await UserModel.create({ email, passwordHash, role: 'MEMBER', displayName, residentId })
-  logAuthEvent(req, AuthEventType.REGISTER, { userId: user.id, email: user.email })
-  const token = signToken(user)
-  setAuthCookie(res, token)
-  res.status(201).json({ token, user: sanitize(user) })
-})
 
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body

@@ -51,6 +51,17 @@ export const requireRole =
     next()
   }
 
+// A resident with a MANAGEMENT-issued temp password can't touch anything else until
+// they set their own — mounted on every non-auth resource router. /auth/me,
+// /auth/logout, and /auth/change-password stay reachable (routes/index.js doesn't
+// wrap /auth with this), which is exactly what's needed to complete the change.
+export const blockIfMustChangePassword = (req, res, next) => {
+  if (req.user?.mustChangePassword) {
+    throw ApiError.forbidden('You must change your temporary password before continuing.')
+  }
+  next()
+}
+
 // STAFF/MANAGEMENT act on behalf of any resident; MEMBER only ever their own.
 export const requireOwnResidentParam =
   (paramName = 'residentId') =>

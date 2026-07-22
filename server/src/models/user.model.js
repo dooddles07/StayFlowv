@@ -3,12 +3,15 @@ import { prisma } from '../config/db.js'
 export const UserModel = {
   findByEmail: (email) => prisma.user.findUnique({ where: { email }, include: { resident: true, staff: true } }),
   findById: (id) => prisma.user.findUnique({ where: { id }, include: { resident: true, staff: true } }),
+  findByResidentId: (residentId) => prisma.user.findUnique({ where: { residentId } }),
   findAuthState: (id) => prisma.user.findUnique({ where: { id }, select: { id: true, tokenVersion: true, isActive: true } }),
   setLoginState: (id, data) => prisma.user.update({ where: { id }, data }),
   setResetToken: (id, resetTokenHash, resetTokenExpiresAt) =>
     prisma.user.update({ where: { id }, data: { resetTokenHash, resetTokenExpiresAt } }),
   findByResetTokenHash: (resetTokenHash) => prisma.user.findUnique({ where: { resetTokenHash } }),
   // Consume a reset: set new password, clear reset fields, revoke all existing sessions, clear any lock.
+  // Also clears mustChangePassword — a public password-reset equally proves the
+  // resident just set their own password, same as the in-app change-password flow.
   applyPasswordReset: (id, passwordHash) =>
     prisma.user.update({
       where: { id },
@@ -19,6 +22,7 @@ export const UserModel = {
         tokenVersion: { increment: 1 },
         failedLoginCount: 0,
         lockedUntil: null,
+        mustChangePassword: false,
       },
     }),
   // Change password for an authenticated user. Bumps tokenVersion to revoke every
@@ -26,7 +30,7 @@ export const UserModel = {
   applyPasswordChange: (id, passwordHash) =>
     prisma.user.update({
       where: { id },
-      data: { passwordHash, tokenVersion: { increment: 1 } },
+      data: { passwordHash, tokenVersion: { increment: 1 }, mustChangePassword: false },
     }),
 
   // --- Email change (verify-then-apply) ---

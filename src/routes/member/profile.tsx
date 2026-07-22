@@ -5,6 +5,7 @@ import { Camera, Car, Heart, Pencil, PhoneCall, Plus, Shield, Shuffle, SlidersHo
 import { PageHeader } from '#/components/stayflow/page-header'
 import { UserAvatar } from '#/components/stayflow/user-avatar'
 import { PasswordInput } from '#/components/stayflow/password-input'
+import { ChangePasswordForm } from '#/components/stayflow/change-password-form'
 import { DICEBEAR_STYLES, avatarUrl } from '#/lib/avatar'
 import { cn } from '#/lib/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
@@ -435,61 +436,6 @@ function EmailSection() {
       <p className="text-xs text-muted-text">We'll send a verification link to the new address. Your email changes only after you open it.</p>
       <Button onClick={submit} disabled={!canSubmit} className="bg-accent-indigo text-white hover:bg-accent-indigo-soft">
         {busy ? 'Sending…' : 'Send verification link'}
-      </Button>
-    </div>
-  )
-}
-
-// --- Change password ---
-function SecuritySection() {
-  const changePassword = useAuthStore((s) => s.changePassword)
-  const [current, setCurrent] = React.useState('')
-  const [next, setNext] = React.useState('')
-  const [confirm, setConfirm] = React.useState('')
-  const [busy, setBusy] = React.useState(false)
-
-  const nextError = next && next.length < 8 ? 'Must be at least 8 characters' : ''
-  const sameError = next && current && next === current ? 'Choose a password different from your current one' : ''
-  const confirmError = confirm && confirm !== next ? 'Passwords do not match' : ''
-  const canSubmit = !busy && !!current && next.length >= 8 && confirm === next && next !== current
-
-  async function submit() {
-    if (!canSubmit) return
-    setBusy(true)
-    try {
-      await changePassword(current, next)
-      toast.success('Password updated. Other devices have been signed out.')
-      setCurrent('')
-      setNext('')
-      setConfirm('')
-    } catch (err) {
-      toast.error(errText(err))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="max-w-md space-y-4">
-        <div>
-          <Label htmlFor="pw-current" className="mb-1.5 text-xs text-muted-text">Current password</Label>
-          <PasswordInput id="pw-current" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className="border-border bg-canvas" />
-        </div>
-        <div>
-          <Label htmlFor="pw-new" className="mb-1.5 text-xs text-muted-text">New password</Label>
-          <PasswordInput id="pw-new" autoComplete="new-password" value={next} aria-invalid={!!nextError || !!sameError} onChange={(e) => setNext(e.target.value)} className="border-border bg-canvas" />
-          <FieldError msg={nextError || sameError} />
-        </div>
-        <div>
-          <Label htmlFor="pw-confirm" className="mb-1.5 text-xs text-muted-text">Confirm new password</Label>
-          <PasswordInput id="pw-confirm" autoComplete="new-password" value={confirm} aria-invalid={!!confirmError} onChange={(e) => setConfirm(e.target.value)} className="border-border bg-canvas" />
-          <FieldError msg={confirmError} />
-        </div>
-      </div>
-      <p className="text-xs text-muted-text">Changing your password signs you out on all other devices.</p>
-      <Button onClick={submit} disabled={!canSubmit} className="bg-accent-indigo text-white hover:bg-accent-indigo-soft">
-        {busy ? 'Updating…' : 'Update Password'}
       </Button>
     </div>
   )
@@ -964,7 +910,7 @@ function ProfilePage() {
         <TabsContent value="security" className="space-y-8 rounded-2xl border border-border bg-surface p-5">
           <EmailSection />
           <div className="border-t border-border" />
-          <SecuritySection />
+          <ChangePasswordForm />
         </TabsContent>
       </Tabs>
     </div>

@@ -304,6 +304,10 @@ model User {
   createdAt    DateTime   @default(now())
   tokenVersion Int        @default(0)
   isActive     Boolean    @default(true)
+  // Set when MANAGEMENT issues a resident login with a system-generated temp
+  // password. Blocks all non-auth API access (see blockIfMustChangePassword) until
+  // the resident sets their own password via change-password or reset-password.
+  mustChangePassword Boolean @default(false)
 
   failedLoginCount Int       @default(0)
   lockedUntil      DateTime?
