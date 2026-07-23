@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/logo.svg" width="64" alt="StayFlow logo" />
+<img src="public/logo.svg?v=2" width="64" alt="StayFlow logo" />
 
 # StayFlow
 
