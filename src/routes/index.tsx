@@ -87,7 +87,7 @@ function LandingPage() {
 
       <div className="relative animate-fade-in flex flex-col items-center text-center">
         <div className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-accent-indigo/15">
-          <img src="/logo.svg" alt="StayFlow" className="size-9" />
+          <img src="/logo.svg?v=2" alt="StayFlow" className="size-9" />
         </div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent-gold">by QUAN7UM</p>
         <h1 className="mt-2 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">StayFlow</h1>
