@@ -29,7 +29,7 @@ export function Sidebar({ portal, identityName, identitySubtitle, identityLoadin
     <aside className={cn('sticky top-0 flex h-dvh w-64 flex-col bg-sidebar text-sidebar-foreground', className)}>
       <div className="flex items-center gap-2.5 px-6 py-6">
         <div className="flex size-9 items-center justify-center rounded-xl bg-accent-indigo/20">
-          <img src="/logo.svg?v=2" alt="" className="size-6" />
+          <img src="/logo.svg?v=3" alt="" className="size-6" />
         </div>
         <div>
           <p className="text-[15px] font-semibold leading-tight tracking-tight">StayFlow</p>
